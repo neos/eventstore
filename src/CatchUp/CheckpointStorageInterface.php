@@ -4,6 +4,9 @@ namespace Neos\EventStore\CatchUp;
 
 use Neos\EventStore\Model\Event\SequenceNumber;
 
+/**
+ * See {@see CatchUp} for an explanation what this class does in detail.
+ */
 interface CheckpointStorageInterface
 {
     public function acquireLock(): SequenceNumber;
