@@ -95,13 +95,14 @@ final class CatchUp
         private readonly \Closure $eventHandler,
         private readonly CheckpointStorageInterface $checkpointStorage,
         private readonly int $batchSize,
+        private readonly ?\Closure $onBeforeBatchCompletedHook,
     ) {
         Assert::positiveInteger($batchSize);
     }
 
     public static function create(\Closure $eventApplier, CheckpointStorageInterface $checkpointStorage): self
     {
-        return new self($eventApplier, $checkpointStorage, 1);
+        return new self($eventApplier, $checkpointStorage, 1, null);
     }
 
     /**
@@ -115,7 +116,22 @@ final class CatchUp
         if ($batchSize === $this->batchSize) {
             return $this;
         }
-        return new self($this->eventHandler, $this->checkpointStorage, $batchSize);
+        return new self($this->eventHandler, $this->checkpointStorage, $batchSize, $this->onBeforeBatchCompletedHook);
+    }
+
+    /**
+     * This hook is called directly before the sequence number is persisted back in CheckpointStorage.
+     * Use this to trigger any operation which need to happen BEFORE the sequence number update is made
+     * visible to the outside.
+     *
+     * Overrides all previously registered onBeforeBatchCompleted hooks.
+     *
+     * @param Closure $callback the hook being called before the batch is completed
+     * @return $this
+     */
+    public function withOnBeforeBatchCompleted(\Closure $callback): self
+    {
+        return new self($this->eventHandler, $this->checkpointStorage, $this->batchSize, $callback);
     }
 
     public function run(EventStreamInterface $eventStream): void
@@ -130,11 +146,17 @@ final class CatchUp
                 ($this->eventHandler)($event);
                 $iteration ++;
                 if ($this->batchSize === 1 || $iteration % $this->batchSize === 0) {
+                    if ($this->onBeforeBatchCompletedHook) {
+                        ($this->onBeforeBatchCompletedHook)();
+                    }
                     $this->checkpointStorage->updateAndReleaseLock($event->sequenceNumber);
                     $highestAppliedSequenceNumber = $this->checkpointStorage->acquireLock();
                 }
             }
         } finally {
+            if ($this->onBeforeBatchCompletedHook) {
+                ($this->onBeforeBatchCompletedHook)();
+            }
             $this->checkpointStorage->updateAndReleaseLock($highestAppliedSequenceNumber);
         }
     }
