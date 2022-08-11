@@ -34,12 +34,27 @@ abstract class AbstractEventStoreTest extends TestCase
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream');
 
         self::assertEventStream($this->loadEvents(), [
-            ['sequenceNumber' => 1, 'version' => 0],
-            ['sequenceNumber' => 2, 'version' => 1],
-            ['sequenceNumber' => 3, 'version' => 2],
-            ['sequenceNumber' => 4, 'version' => 3],
-            ['sequenceNumber' => 5, 'version' => 4],
-            ['sequenceNumber' => 6, 'version' => 5],
+            ['version' => 0],
+            ['version' => 1],
+            ['version' => 2],
+            ['version' => 3],
+            ['version' => 4],
+            ['version' => 5],
+        ]);
+    }
+
+    public function test_commit_increases_sequenceNumber(): void
+    {
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream');
+
+        self::assertEventStream($this->loadEvents(), [
+            ['sequenceNumber' => 1],
+            ['sequenceNumber' => 2],
+            ['sequenceNumber' => 3],
+            ['sequenceNumber' => 4],
+            ['sequenceNumber' => 5],
+            ['sequenceNumber' => 6],
         ]);
     }
 
@@ -81,6 +96,18 @@ abstract class AbstractEventStoreTest extends TestCase
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'existing-stream');
         $this->commitEvent(['data' => 'something'], $streamName, $expectedVersion);
         $this->expectNotToPerformAssertions();
+    }
+
+    public function test_commit_commitResult_contains_correct_highestCommittedSequenceNumber(): void
+    {
+        $commitResult = $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
+        self::assertSame(3, $commitResult->highestCommittedSequenceNumber->value);
+    }
+
+    public function test_commit_commitResult_contains_correct_highestCommittedVersion(): void
+    {
+        $commitResult = $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
+        self::assertSame(2, $commitResult->highestCommittedVersion->value);
     }
 
     public function test_load_returns_all_events(): void

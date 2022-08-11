@@ -15,7 +15,6 @@ use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
-use Webmozart\Assert\Assert;
 
 final class InMemoryEventStore implements EventStoreInterface
 {
@@ -33,7 +32,7 @@ final class InMemoryEventStore implements EventStoreInterface
             VirtualStreamName::class => match ($streamName->type) {
                 VirtualStreamType::ALL => $this->events,
                 VirtualStreamType::CATEGORY => array_filter($this->events, static fn (EventEnvelope $event) => str_starts_with($event->streamName->value, $streamName->value)),
-                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $event) => $event->metadata->get('correlationIdentifier') === $streamName->value),
+                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->metadata->get('correlationIdentifier') === $streamName->value),
             },
             default => $this->events,
         };
@@ -47,7 +46,9 @@ final class InMemoryEventStore implements EventStoreInterface
         $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
         $now = new \DateTimeImmutable();
         $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
+        $lastCommittedVersion = $version;
         foreach ($events as $event) {
+            $this->sequenceNumber = $this->sequenceNumber->next();
             $this->events[] = new EventEnvelope(
                 new Event(
                     $event->id,
@@ -60,11 +61,11 @@ final class InMemoryEventStore implements EventStoreInterface
                 $this->sequenceNumber,
                 $now
             );
+            $lastCommittedVersion = $version;
             $version = $version->next();
-            $this->sequenceNumber = $this->sequenceNumber->next();
         }
 
-        return new CommitResult($version, $this->sequenceNumber);
+        return new CommitResult($lastCommittedVersion, $this->sequenceNumber);
     }
 
     public function deleteStream(StreamName $streamName): void
