@@ -5,7 +5,7 @@ namespace Neos\EventStore\Helper;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
-final class ClosureEventStreamInterface implements EventStreamInterface
+final class ClosureEventStream implements EventStreamInterface
 {
 
     private function __construct(

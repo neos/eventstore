@@ -17,7 +17,7 @@ use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
 use Webmozart\Assert\Assert;
 
-final class InMemoryEventStoreInterface implements EventStoreInterface
+final class InMemoryEventStore implements EventStoreInterface
 {
     /**
      * @var EventEnvelope[]
@@ -37,7 +37,7 @@ final class InMemoryEventStoreInterface implements EventStoreInterface
             },
             default => $this->events,
         };
-        return InMemoryEventStreamInterface::create(...$events);
+        return InMemoryEventStream::create(...$events);
     }
 
     public function commit(StreamName $streamName, Events $events, ExpectedVersion $expectedVersion): CommitResult
@@ -46,7 +46,7 @@ final class InMemoryEventStoreInterface implements EventStoreInterface
         $expectedVersion->verifyVersion($maybeVersion);
         $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
         $now = new \DateTimeImmutable();
-        $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::fromInteger(1);
+        $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
         foreach ($events as $event) {
             $this->events[] = new EventEnvelope(
                 new Event(

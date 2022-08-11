@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Helper;
 
-use Neos\EventStore\Helper\InMemoryEventStreamInterface;
+use Neos\EventStore\Helper\InMemoryEventStream;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
@@ -36,7 +36,7 @@ final class InMemoryEventStreamTest extends TestCase
                 $now,
             );
         }
-        $mockEventStream = InMemoryEventStreamInterface::create(...$mockEvents);
+        $mockEventStream = InMemoryEventStream::create(...$mockEvents);
         yield [$mockEventStream, 'abcdefgh'];
         yield [$mockEventStream->limit(3), 'abc'];
         yield [$mockEventStream->withMinimumSequenceNumber(SequenceNumber::fromInteger(3)), 'cdefgh'];

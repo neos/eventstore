@@ -6,7 +6,7 @@ use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
-final class InMemoryEventStreamInterface implements EventStreamInterface
+final class InMemoryEventStream implements EventStreamInterface
 {
 
     /**

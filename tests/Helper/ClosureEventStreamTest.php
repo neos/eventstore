@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Helper;
 
-use Neos\EventStore\Helper\ClosureEventStreamInterface;
+use Neos\EventStore\Helper\ClosureEventStream;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
@@ -19,7 +19,7 @@ final class ClosureEventStreamTest extends TestCase
 {
     public function iteration_dataProvider(): \Generator
     {
-        $mockEventStream = ClosureEventStreamInterface::create(static function(?SequenceNumber $minimumSequenceNumber, ?SequenceNumber $maximumSequenceNumber, ?int $limit, bool $backwards) {
+        $mockEventStream = ClosureEventStream::create(static function(?SequenceNumber $minimumSequenceNumber, ?SequenceNumber $maximumSequenceNumber, ?int $limit, bool $backwards) {
             $result = '';
             $result .= $minimumSequenceNumber !== null ? $minimumSequenceNumber->value : '_';
             $result .= $maximumSequenceNumber !== null ? $maximumSequenceNumber->value : '_';
