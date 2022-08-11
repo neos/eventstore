@@ -2,9 +2,8 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Helper;
 
-use Neos\EventStore\Helper\InMemoryCheckpointStorageInterface;
-use Neos\EventStore\Model\SubscriptionId;
-use Neos\EventStore\Subscription\CheckpointStorageInterface;
+use Neos\EventStore\CatchUp\CheckpointStorageInterface;
+use Neos\EventStore\Helper\InMemoryCheckpointStorage;
 use Neos\EventStore\Tests\AbstractCheckpointStorageTest;
 
 final class InMemoryCheckpointStorageTest extends AbstractCheckpointStorageTest
@@ -12,11 +11,11 @@ final class InMemoryCheckpointStorageTest extends AbstractCheckpointStorageTest
 
     public function tearDown(): void
     {
-        InMemoryCheckpointStorageInterface::_resetTransactions();
+        InMemoryCheckpointStorage::_resetTransactions();
     }
 
-    protected function createCheckpointStorage(SubscriptionId $subscriptionId): CheckpointStorageInterface
+    protected function createCheckpointStorage(string $subscriptionId): CheckpointStorageInterface
     {
-        return new InMemoryCheckpointStorageInterface($subscriptionId);
+        return new InMemoryCheckpointStorage($subscriptionId);
     }
 }

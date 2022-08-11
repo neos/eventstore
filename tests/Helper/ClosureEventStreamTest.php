@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\Tests\Helper;
 
 use Neos\EventStore\Helper\ClosureEventStreamInterface;
+use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventMetadata;
@@ -25,10 +26,12 @@ final class ClosureEventStreamTest extends TestCase
             $result .= $limit !== null ? (string)$limit : '_';
             $result .= $backwards ? 'b' : 'f';
             yield new EventEnvelope(
-                EventId::create(),
-                EventType::fromString('SomeEventType'),
-                EventData::fromString($result),
-                EventMetadata::none(),
+                new Event(
+                    EventId::create(),
+                    EventType::fromString('SomeEventType'),
+                    EventData::fromString($result),
+                    EventMetadata::none(),
+                ),
                 StreamName::fromString('some-stream'),
                 Version::fromInteger(1),
                 SequenceNumber::fromInteger(1),
@@ -50,7 +53,7 @@ final class ClosureEventStreamTest extends TestCase
      */
     public function test_iteration(EventStreamInterface $eventStream, string $expectedResult): void
     {
-        $actualResult = implode('', array_map(static fn (EventEnvelope $event) => $event->data->value, iterator_to_array($eventStream)));
+        $actualResult = implode('', array_map(static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->data->value, iterator_to_array($eventStream)));
         self::assertSame($expectedResult, $actualResult);
     }
 }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\Helper;
 
 use Neos\EventStore\EventStoreInterface;
+use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
@@ -48,10 +49,12 @@ final class InMemoryEventStoreInterface implements EventStoreInterface
         $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::fromInteger(1);
         foreach ($events as $event) {
             $this->events[] = new EventEnvelope(
-                $event->id,
-                $event->type,
-                $event->data,
-                $event->metadata,
+                new Event(
+                    $event->id,
+                    $event->type,
+                    $event->data,
+                    $event->metadata,
+                ),
                 $streamName,
                 $version,
                 $this->sequenceNumber,
