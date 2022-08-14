@@ -140,6 +140,8 @@ final class CatchUp
         $iteration = 0;
         try {
             foreach ($eventStream->withMinimumSequenceNumber($highestAppliedSequenceNumber->next()) as $event) {
+                // WHY IS THIS CHECK NEEDED?
+                // AND actually I think this check is wrong, it should be $highestAppliedSequenceNumber()->next()->value, like above. Or not?
                 if ($event->sequenceNumber->value <= $highestAppliedSequenceNumber->value) {
                     continue;
                 }
