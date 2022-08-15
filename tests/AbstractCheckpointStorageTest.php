@@ -23,9 +23,10 @@ abstract class AbstractCheckpointStorageTest extends TestCase
     public function test_acquireLock_fails_if_a_transaction_is_active_already(): void
     {
         $checkpointStorage1 = $this->createCheckpointStorage('some-subscription');
-        $checkpointStorage1->acquireLock();
+
         $checkpointStorage2 = $this->createCheckpointStorage('some-other-subscription');
         $checkpointStorage3 = $this->createCheckpointStorage('some-subscription');
+        $checkpointStorage1->acquireLock();
         $checkpointStorage2->acquireLock();
 
         $this->expectException(CheckpointException::class);
@@ -40,6 +41,15 @@ abstract class AbstractCheckpointStorageTest extends TestCase
         $checkpointStorage->updateAndReleaseLock(SequenceNumber::fromInteger(123));
     }
 
+    public function test_updateAndReleaseLock_fails_if_lock_was_released_previously(): void
+    {
+        $checkpointStorage = $this->createCheckpointStorage('some-subscription');
+        $checkpointStorage->acquireLock();
+        $checkpointStorage->updateAndReleaseLock(SequenceNumber::fromInteger(123));
+
+        $this->expectException(CheckpointException::class);
+        $checkpointStorage->updateAndReleaseLock(SequenceNumber::fromInteger(123));
+    }
 
     public function test_getHighestAppliedSequenceNumber_returns_first_sequenceNumber_when_first_called(): void
     {
