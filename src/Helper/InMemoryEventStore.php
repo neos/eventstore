@@ -32,7 +32,7 @@ final class InMemoryEventStore implements EventStoreInterface
             VirtualStreamName::class => match ($streamName->type) {
                 VirtualStreamType::ALL => $this->events,
                 VirtualStreamType::CATEGORY => array_filter($this->events, static fn (EventEnvelope $event) => str_starts_with($event->streamName->value, $streamName->value)),
-                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->metadata->get('correlationIdentifier') === $streamName->value),
+                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->metadata->get('correlationId') === $streamName->value),
             },
             default => $this->events,
         };
