@@ -3,6 +3,7 @@
     "description": "Store for Event-Sourced applications",
     "type": "library",
     "require": {
+        "php": "^8.1",
         "webmozart/assert": "^1.10",
         "ramsey/uuid": "^4.3"
     },
