@@ -9,11 +9,11 @@ final class BatchEventStream implements EventStreamInterface
 {
     private function __construct(
         private EventStreamInterface $wrappedEventStream,
-        private                      readonly int $batchSize,
-        private                      readonly ?SequenceNumber $minimumSequenceNumber,
-        private                      readonly ?SequenceNumber $maximumSequenceNumber,
-        private                      readonly ?int $limit,
-        private                      readonly bool $backwards,
+        private readonly int $batchSize,
+        private readonly ?SequenceNumber $minimumSequenceNumber,
+        private readonly ?SequenceNumber $maximumSequenceNumber,
+        private readonly ?int $limit,
+        private readonly bool $backwards,
     ) {
         if ($this->wrappedEventStream instanceof self) {
             $this->wrappedEventStream = $this->wrappedEventStream->wrappedEventStream;
@@ -74,14 +74,15 @@ final class BatchEventStream implements EventStreamInterface
             $event = null;
             foreach ($this->wrappedEventStream as $event) {
                 yield $event;
-                $iteration ++;
+                $iteration++;
                 if ($this->limit !== null && $iteration >= $this->limit) {
                     return;
                 }
             }
-            if ($event !== null && (!$this->backwards || $event->sequenceNumber->value > 1)) {
-                $this->wrappedEventStream = $this->backwards ? $this->wrappedEventStream->withMaximumSequenceNumber($event->sequenceNumber->previous()) : $this->wrappedEventStream->withMinimumSequenceNumber($event->sequenceNumber->next());
+            if ($event === null || ($this->backwards && $event->sequenceNumber->value === 1)) {
+                return;
             }
+            $this->wrappedEventStream = $this->backwards ? $this->wrappedEventStream->withMaximumSequenceNumber($event->sequenceNumber->previous()) : $this->wrappedEventStream->withMinimumSequenceNumber($event->sequenceNumber->next());
         } while ($event !== null);
     }
 }
