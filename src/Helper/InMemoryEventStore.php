@@ -5,6 +5,7 @@ namespace Neos\EventStore\Helper;
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\EventStore\CommitResult;
+use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
@@ -25,7 +26,7 @@ final class InMemoryEventStore implements EventStoreInterface
 
     private ?SequenceNumber $sequenceNumber = null;
 
-    public function load(VirtualStreamName|StreamName $streamName): EventStreamInterface
+    public function load(VirtualStreamName|StreamName $streamName, EventStreamFilter $filter = null): EventStreamInterface
     {
         $events = match ($streamName::class) {
             StreamName::class => array_filter($this->events, static fn (EventEnvelope $event) => $event->streamName->equals($streamName)),
@@ -36,6 +37,9 @@ final class InMemoryEventStore implements EventStoreInterface
             },
             default => $this->events,
         };
+        if ($filter !== null && $filter->eventTypes !== null) {
+            $events = array_filter($events, static fn (EventEnvelope $event) => $filter->eventTypes->contains($event->event->type));
+        }
         return InMemoryEventStream::create(...$events);
     }
 

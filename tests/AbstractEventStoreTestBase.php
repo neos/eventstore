@@ -4,10 +4,12 @@ namespace Neos\EventStore\Tests;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Event\EventTypes;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventMetadata;
+use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\EventType;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
@@ -20,7 +22,7 @@ use Neos\EventStore\Model\Events;
 use Neos\EventStore\ProvidesSetupInterface;
 use PHPUnit\Framework\TestCase;
 
-abstract class AbstractEventStoreTest extends TestCase
+abstract class AbstractEventStoreTestBase extends TestCase
 {
     private ?EventStoreInterface $eventStore = null;
 
@@ -28,27 +30,24 @@ abstract class AbstractEventStoreTest extends TestCase
 
     // --- Tests ----
 
-    public function test_commit_increases_version(): void
+    public function test_commit_increases_version_per_stream(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream');
-
-        self::assertEventStream($this->loadEvents(), [
+        $this->commitDummyEvents();
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
             ['version' => 0],
             ['version' => 1],
             ['version' => 2],
-            ['version' => 3],
-            ['version' => 4],
-            ['version' => 5],
+            ['version' => 0],
+            ['version' => 1],
+            ['version' => 2],
         ]);
     }
 
     public function test_commit_increases_sequenceNumber(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream');
+        $this->commitDummyEvents();
 
-        self::assertEventStream($this->loadEvents(), [
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
             ['sequenceNumber' => 1],
             ['sequenceNumber' => 2],
             ['sequenceNumber' => 3],
@@ -112,36 +111,51 @@ abstract class AbstractEventStoreTest extends TestCase
 
     public function test_load_returns_all_events(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
+        $this->commitDummyEvents();
 
-        self::assertEventStream($this->loadEvents(), [
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
             ['sequenceNumber' => 1, 'type' => 'SomeEventType', 'data' => 'a', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 0],
-            ['sequenceNumber' => 2, 'type' => 'SomeEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
+            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
             ['sequenceNumber' => 3, 'type' => 'SomeEventType', 'data' => 'c', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 2],
-            ['sequenceNumber' => 4, 'type' => 'SomeEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
             ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 1],
-            ['sequenceNumber' => 6, 'type' => 'SomeEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
     public function test_load_returns_empty_stream_if_specified_streamName_does_not_exist(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
+        $this->commitDummyEvents();
 
-        self::assertEventStream($this->loadEvents(StreamName::fromString('non-existing')), []);
+        self::assertEventStream($this->getEventStore()->load(StreamName::fromString('non-existing')), []);
     }
 
     public function test_load_returns_filtered_events_matching_specified_streamName(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
+        $this->commitDummyEvents();
 
-        self::assertEventStream($this->loadEvents(StreamName::fromString('second-stream')), [
-            ['sequenceNumber' => 4, 'type' => 'SomeEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
+        self::assertEventStream($this->getEventStore()->load(StreamName::fromString('second-stream')), [
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
             ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 1],
-            ['sequenceNumber' => 6, 'type' => 'SomeEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+        ]);
+    }
+
+    public function test_load_returns_empty_stream_if_specified_eventType_does_not_exist(): void
+    {
+        $this->commitDummyEvents();
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::forEventTypes(EventTypes::create(EventType::fromString('NonExistingEventType')))), []);
+    }
+
+    public function test_load_returns_filtered_events_matching_specified_evenTypes(): void
+    {
+        $this->commitDummyEvents();
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::forEventTypes(EventTypes::create(EventType::fromString('SomeOtherEventType')))), [
+            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
@@ -151,7 +165,7 @@ abstract class AbstractEventStoreTest extends TestCase
         $this->deleteStream('first-stream');
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
 
-        self::assertEventStream($this->loadEvents(), [
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
             ['sequenceNumber' => 4],
             ['sequenceNumber' => 5],
             ['sequenceNumber' => 6],
@@ -160,14 +174,6 @@ abstract class AbstractEventStoreTest extends TestCase
 
 
     // --- Helper methods -----
-
-    final protected function loadEvents(StreamName $streamName = null): EventStreamInterface
-    {
-        if ($streamName === null) {
-            $streamName = VirtualStreamName::all();
-        }
-        return $this->getEventStore()->load($streamName);
-    }
 
     /**
      * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>}> $events
@@ -209,6 +215,12 @@ abstract class AbstractEventStoreTest extends TestCase
             $index ++;
         }
         self::assertEquals($expectedEvents, $actualEvents);
+    }
+
+    final protected function commitDummyEvents(): void
+    {
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => in_array($char, ['a', 'c', 'e'], true) ? 'SomeEventType' : 'SomeOtherEventType'], range('a', 'c')), 'first-stream');
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => in_array($char, ['a', 'c', 'e'], true) ? 'SomeEventType' : 'SomeOtherEventType'], range('d', 'f')), 'second-stream');
     }
 
     // --- Internal -----
