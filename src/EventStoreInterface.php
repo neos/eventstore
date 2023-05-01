@@ -4,6 +4,7 @@ namespace Neos\EventStore;
 
 use Neos\EventStore\Exception\ConcurrencyException;
 use Neos\EventStore\Model\EventStore\CommitResult;
+use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\Event\StreamName;
@@ -12,7 +13,7 @@ use Neos\EventStore\Model\Events;
 
 interface EventStoreInterface
 {
-    public function load(StreamName|VirtualStreamName $streamName): EventStreamInterface;
+    public function load(StreamName|VirtualStreamName $streamName, EventStreamFilter $filter = null): EventStreamInterface;
 
     /**
      * @param StreamName $streamName

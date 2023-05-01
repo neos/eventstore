@@ -4,9 +4,9 @@ namespace Neos\EventStore\Tests\Helper;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Helper\InMemoryEventStore;
-use Neos\EventStore\Tests\AbstractEventStoreTest;
+use Neos\EventStore\Tests\AbstractEventStoreTestBase;
 
-final class InMemoryEventStoreTest extends AbstractEventStoreTest
+final class InMemoryEventStoreTestBase extends AbstractEventStoreTestBase
 {
 
     protected function createEventStore(): EventStoreInterface

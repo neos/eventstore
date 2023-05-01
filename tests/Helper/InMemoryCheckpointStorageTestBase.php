@@ -4,9 +4,9 @@ namespace Neos\EventStore\Tests\Helper;
 
 use Neos\EventStore\CatchUp\CheckpointStorageInterface;
 use Neos\EventStore\Helper\InMemoryCheckpointStorage;
-use Neos\EventStore\Tests\AbstractCheckpointStorageTest;
+use Neos\EventStore\Tests\AbstractCheckpointStorageTestBase;
 
-final class InMemoryCheckpointStorageTest extends AbstractCheckpointStorageTest
+final class InMemoryCheckpointStorageTestBase extends AbstractCheckpointStorageTestBase
 {
 
     public function tearDown(): void
