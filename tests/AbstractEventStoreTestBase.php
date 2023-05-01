@@ -145,14 +145,14 @@ abstract class AbstractEventStoreTestBase extends TestCase
     {
         $this->commitDummyEvents();
 
-        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::forEventTypes(EventTypes::create(EventType::fromString('NonExistingEventType')))), []);
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::create(eventTypes: EventTypes::create(EventType::fromString('NonExistingEventType')))), []);
     }
 
     public function test_load_returns_filtered_events_matching_specified_evenTypes(): void
     {
         $this->commitDummyEvents();
 
-        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::forEventTypes(EventTypes::create(EventType::fromString('SomeOtherEventType')))), [
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::create(eventTypes: EventTypes::create(EventType::fromString('SomeOtherEventType')))), [
             ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
             ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
             ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
