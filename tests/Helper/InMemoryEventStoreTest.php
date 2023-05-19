@@ -6,7 +6,7 @@ use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Helper\InMemoryEventStore;
 use Neos\EventStore\Tests\AbstractEventStoreTestBase;
 
-final class InMemoryEventStoreTestBase extends AbstractEventStoreTestBase
+final class InMemoryEventStoreTest extends AbstractEventStoreTestBase
 {
 
     protected function createEventStore(): EventStoreInterface

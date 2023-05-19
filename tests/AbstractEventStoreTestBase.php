@@ -57,7 +57,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
-    public function dataProvider_commit_expectVersion_concurrencyException(): \Generator
+    public static function dataProvider_commit_expectVersion_concurrencyException(): \Generator
     {
         yield ['streamName' => 'nonexisting-stream', ExpectedVersion::STREAM_EXISTS()];
         yield ['streamName' => 'nonexisting-stream', ExpectedVersion::fromVersion(Version::first())];
@@ -78,7 +78,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitEvent(['data' => 'something'], $streamName, $expectedVersion);
     }
 
-    public function dataProvider_commit_expectVersion_success(): \Generator
+    public static function dataProvider_commit_expectVersion_success(): \Generator
     {
         yield ['streamName' => 'nonexisting-stream', ExpectedVersion::ANY()];
         yield ['streamName' => 'nonexisting-stream', ExpectedVersion::NO_STREAM()];
@@ -219,8 +219,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     final protected function commitDummyEvents(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => in_array($char, ['a', 'c', 'e'], true) ? 'SomeEventType' : 'SomeOtherEventType'], range('a', 'c')), 'first-stream');
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => in_array($char, ['a', 'c', 'e'], true) ? 'SomeEventType' : 'SomeOtherEventType'], range('d', 'f')), 'second-stream');
+        $typeClosure = static fn (string $char) => in_array($char, ['a', 'c', 'e'], true) ? 'SomeEventType' : 'SomeOtherEventType';
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => $typeClosure($char)], range('a', 'c')), 'first-stream');
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => $typeClosure($char)], range('d', 'f')), 'second-stream');
     }
 
     // --- Internal -----
