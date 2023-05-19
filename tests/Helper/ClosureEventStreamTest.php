@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ClosureEventStreamTest extends TestCase
 {
-    public function iteration_dataProvider(): \Generator
+    public static function iteration_dataProvider(): \Generator
     {
         $mockEventStream = ClosureEventStream::create(static function(?SequenceNumber $minimumSequenceNumber, ?SequenceNumber $maximumSequenceNumber, ?int $limit, bool $backwards) {
             $result = '';

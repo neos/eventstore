@@ -18,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 final class InMemoryEventStreamTest extends TestCase
 {
 
-    public function iteration_dataProvider(): \Generator
+    public static function iteration_dataProvider(): \Generator
     {
         $mockEvents = [];
         $now = new \DateTimeImmutable();
