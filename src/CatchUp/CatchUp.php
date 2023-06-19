@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\CatchUp;
 
 use Neos\EventStore\DoctrineAdapter\DoctrineCheckpointStorage;
+use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Webmozart\Assert\Assert;
@@ -134,7 +135,7 @@ final class CatchUp
         return new self($this->eventHandler, $this->checkpointStorage, $this->batchSize, $callback);
     }
 
-    public function run(EventStreamInterface $eventStream): void
+    public function run(EventStreamInterface $eventStream): SequenceNumber
     {
         $highestAppliedSequenceNumber = $this->checkpointStorage->acquireLock();
         $iteration = 0;
@@ -159,5 +160,6 @@ final class CatchUp
             }
             $this->checkpointStorage->updateAndReleaseLock($highestAppliedSequenceNumber);
         }
+        return $highestAppliedSequenceNumber;
     }
 }
