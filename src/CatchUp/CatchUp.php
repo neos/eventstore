@@ -6,6 +6,7 @@ use Neos\EventStore\DoctrineAdapter\DoctrineCheckpointStorage;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
+use Throwable;
 use Webmozart\Assert\Assert;
 
 /**
@@ -155,8 +156,13 @@ final class CatchUp
                 }
             }
         } finally {
-            if ($this->onBeforeBatchCompletedHook) {
-                ($this->onBeforeBatchCompletedHook)();
+            try {
+                if ($this->onBeforeBatchCompletedHook) {
+                    ($this->onBeforeBatchCompletedHook)();
+                }
+            } catch (Throwable $e) {
+                $this->checkpointStorage->updateAndReleaseLock($highestAppliedSequenceNumber);
+                throw $e;
             }
             $this->checkpointStorage->updateAndReleaseLock($highestAppliedSequenceNumber);
         }
