@@ -153,6 +153,8 @@ final class CatchUp
                     }
                     $this->checkpointStorage->updateAndReleaseLock($event->sequenceNumber);
                     $highestAppliedSequenceNumber = $this->checkpointStorage->acquireLock();
+                } else {
+                    $highestAppliedSequenceNumber = $event->sequenceNumber;
                 }
             }
         } finally {
