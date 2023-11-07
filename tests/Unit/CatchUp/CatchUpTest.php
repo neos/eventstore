@@ -1,11 +1,10 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Tests\CatchUp;
+namespace Neos\EventStore\Tests\Unit\CatchUp;
 
 
 use Neos\EventStore\CatchUp\CatchUp;
 use Neos\EventStore\CatchUp\CheckpointStorageInterface;
-use Neos\EventStore\Helper\BatchEventStream;
 use Neos\EventStore\Helper\InMemoryEventStream;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;

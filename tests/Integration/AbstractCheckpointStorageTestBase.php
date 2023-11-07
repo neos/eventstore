@@ -1,11 +1,10 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Tests;
+namespace Neos\EventStore\Tests\Integration;
 
 use Neos\EventStore\CatchUp\CheckpointStorageInterface;
 use Neos\EventStore\Exception\CheckpointException;
 use Neos\EventStore\Model\Event\SequenceNumber;
-use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 

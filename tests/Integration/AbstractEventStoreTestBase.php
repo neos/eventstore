@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Tests;
+namespace Neos\EventStore\Tests\Integration;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Exception\ConcurrencyException;
