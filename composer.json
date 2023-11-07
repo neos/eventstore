@@ -2,6 +2,13 @@
     "name": "neos/eventstore",
     "description": "Store for Event-Sourced applications",
     "type": "library",
+    "license": "MIT",
+    "funding": [
+        {
+            "type": "other",
+            "url": "https://www.neos.io/community/participate/supporting-neos.html"
+        }
+    ],
     "require": {
         "php": "^8.1",
         "webmozart/assert": "^1.10",
