@@ -18,7 +18,7 @@
         "roave/security-advisories": "dev-latest",
         "phpstan/phpstan": "^1.10",
         "squizlabs/php_codesniffer": "^4.0.x-dev",
-        "phpunit/phpunit": "^9 || ^10"
+        "phpunit/phpunit": "^10"
     },
     "autoload": {
         "psr-4": {
