@@ -1,23 +1,24 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Tests\Helper;
+namespace Neos\EventStore\Tests\Unit\Helper;
 
+use Neos\EventStore\Helper\BatchEventStream;
 use Neos\EventStore\Helper\InMemoryEventStream;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventMetadata;
+use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\EventType;
+use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
-use Neos\EventStore\Model\EventEnvelope;
-use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
-#[CoversClass(InMemoryEventStream::class)]
-final class InMemoryEventStreamTest extends TestCase
+#[CoversClass(BatchEventStream::class)]
+final class BatchEventStreamTest extends TestCase
 {
 
     public static function iteration_dataProvider(): \Generator
@@ -38,7 +39,7 @@ final class InMemoryEventStreamTest extends TestCase
                 $now,
             );
         }
-        $mockEventStream = InMemoryEventStream::create(...$mockEvents);
+        $mockEventStream = BatchEventStream::create(InMemoryEventStream::create(...$mockEvents), 3);
         yield [$mockEventStream, 'abcdefgh'];
         yield [$mockEventStream->limit(3), 'abc'];
         yield [$mockEventStream->withMinimumSequenceNumber(SequenceNumber::fromInteger(3)), 'cdefgh'];

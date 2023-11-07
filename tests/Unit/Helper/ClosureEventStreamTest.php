@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Tests\Helper;
+namespace Neos\EventStore\Tests\Unit\Helper;
 
 use Neos\EventStore\Helper\ClosureEventStream;
 use Neos\EventStore\Model\Event;
