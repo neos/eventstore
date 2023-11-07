@@ -8,6 +8,7 @@ use Webmozart\Assert\Assert;
 /**
  * A Virtual stream name synthesize multiple streams and can only be used to _read_ events.
  * Internally, virtual stream names start with a "$"
+ * @api
  */
 final class VirtualStreamName
 {

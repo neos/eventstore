@@ -6,6 +6,11 @@ use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
+/**
+ * In-memory implementation of an event stream
+ *
+ * @internal This helper is mostly useful for testing purposes and should not be used in production
+ */
 final class InMemoryEventStream implements EventStreamInterface
 {
 

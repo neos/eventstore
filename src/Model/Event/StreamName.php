@@ -2,10 +2,14 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\Event;
 
+use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Webmozart\Assert\Assert;
 
 /**
  * The stream name can be any (non-empty) string
+ *
+ * @see VirtualStreamName
+ * @api
  */
 final class StreamName
 {

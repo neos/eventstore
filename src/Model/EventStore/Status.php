@@ -2,6 +2,12 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStore;
 
+use Neos\EventStore\ProvidesStatusInterface;
+
+/**
+ * The result of a {@see ProvidesStatusInterface::status()} call
+ * @api
+ */
 final class Status
 {
     /**

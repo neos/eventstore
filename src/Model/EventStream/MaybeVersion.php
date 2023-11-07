@@ -4,6 +4,10 @@ namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\Model\Event\Version;
 
+/**
+ * An [option type](https://en.wikipedia.org/wiki/Option_type) that represents a {@see Version} or nothing
+ * @api
+ */
 final class MaybeVersion
 {
     private function __construct(

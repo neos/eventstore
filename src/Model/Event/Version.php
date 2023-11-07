@@ -6,6 +6,7 @@ use Webmozart\Assert\Assert;
 
 /**
  * The version of an event within a single, non-virtual stream
+ * @api
  */
 final class Version
 {

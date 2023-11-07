@@ -2,6 +2,12 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStore;
 
+use Neos\EventStore\ProvidesSetupInterface;
+
+/**
+ * The result of a {@see ProvidesSetupInterface::setup()} call
+ * @api
+ */
 final class SetupResult
 {
     /**

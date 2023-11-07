@@ -4,6 +4,11 @@ namespace Neos\EventStore\Model\Event;
 
 use Webmozart\Assert\Assert;
 
+/**
+ * Arbitrary metadata that can be attached to events, serialized as JSON
+ *
+ * @api
+ */
 final class EventMetadata
 {
     /**

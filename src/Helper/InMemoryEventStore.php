@@ -17,6 +17,11 @@ use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
 
+/**
+ * In-memorry implementation of an event store
+ *
+ * @internal This helper is mostly useful for testing purposes and should not be used in production
+ */
 final class InMemoryEventStore implements EventStoreInterface
 {
     /**

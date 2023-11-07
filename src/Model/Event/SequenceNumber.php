@@ -5,7 +5,8 @@ namespace Neos\EventStore\Model\Event;
 use Webmozart\Assert\Assert;
 
 /**
- * The global sequence number of an event
+ * The global sequence number of a persisted event
+ * @api
  */
 final class SequenceNumber
 {

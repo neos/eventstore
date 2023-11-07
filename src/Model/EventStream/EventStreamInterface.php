@@ -6,6 +6,8 @@ use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\EventEnvelope;
 
 /**
+ * Common interface for event streams
+ * @api
  * @extends \IteratorAggregate<EventEnvelope>
  */
 interface EventStreamInterface extends \IteratorAggregate

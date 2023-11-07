@@ -10,6 +10,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 /**
  * The expected version of a stream when committing new events to it
  * @see EventStoreInterface::commit()
+ * @api
  */
 final class ExpectedVersion
 {

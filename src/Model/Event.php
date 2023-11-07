@@ -8,7 +8,8 @@ use Neos\EventStore\Model\Event\EventMetadata;
 use Neos\EventStore\Model\Event\EventType;
 
 /**
- * Main model for reading and writing (when reading, it is wrapped in {@see EventEnvelope}.
+ * Main model for reading and writing (when reading, it is wrapped in {@see EventEnvelope})
+ * @api
  */
 final class Event
 {

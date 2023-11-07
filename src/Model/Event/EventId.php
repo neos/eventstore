@@ -4,6 +4,11 @@ namespace Neos\EventStore\Model\Event;
 
 use Ramsey\Uuid\Uuid;
 
+/**
+ * Globally unique id of an event, usually in the form of a UUID
+ *
+ * @api
+ */
 final class EventId
 {
     private function __construct(
