@@ -76,13 +76,13 @@ final class BatchEventStream implements EventStreamInterface
                 yield $event;
                 $iteration++;
                 if ($this->limit !== null && $iteration >= $this->limit) {
-                    return;
+                    break 2;
                 }
             }
             if ($event === null || ($this->backwards && $event->sequenceNumber->value === 1)) {
-                return;
+                break;
             }
             $this->wrappedEventStream = $this->backwards ? $this->wrappedEventStream->withMaximumSequenceNumber($event->sequenceNumber->previous()) : $this->wrappedEventStream->withMinimumSequenceNumber($event->sequenceNumber->next());
-        } while ($event !== null);
+        } while (true);
     }
 }
