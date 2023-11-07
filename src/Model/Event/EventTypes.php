@@ -8,7 +8,10 @@ use Traversable;
 use Webmozart\Assert\Assert;
 
 /**
+ * A type-safe set of {@see EventType} instances
+ *
  * @implements IteratorAggregate<EventType>
+ * @api
  */
 final class EventTypes implements IteratorAggregate
 {

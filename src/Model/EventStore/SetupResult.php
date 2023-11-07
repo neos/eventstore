@@ -2,6 +2,12 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStore;
 
+use Neos\EventStore\ProvidesSetupInterface;
+
+/**
+ * The result of a {@see ProvidesSetupInterface::setup()} call
+ * @api
+ */
 final class SetupResult
 {
     /**
@@ -13,7 +19,8 @@ final class SetupResult
         public readonly array $errors,
         public readonly array $warnings,
         public readonly array $notices,
-    ) {}
+    ) {
+    }
 
     public static function success(string $notice = null): self
     {

@@ -20,8 +20,10 @@ use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Events;
 use Neos\EventStore\ProvidesSetupInterface;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
+#[CoversNothing]
 abstract class AbstractEventStoreTestBase extends TestCase
 {
     private ?EventStoreInterface $eventStore = null;

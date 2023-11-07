@@ -10,6 +10,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 /**
  * The expected version of a stream when committing new events to it
  * @see EventStoreInterface::commit()
+ * @api
  */
 final class ExpectedVersion
 {
@@ -19,11 +20,13 @@ final class ExpectedVersion
 
     private function __construct(
         public readonly int $value
-    ) {}
+    ) {
+    }
 
     /**
      * The stream should exist. If it or a metadata stream does not exist treat that as a concurrency problem.
      */
+    // phpcs:ignore
     public static function STREAM_EXISTS(): self
     {
         return new self(self::STREAM_EXISTS);
@@ -40,6 +43,7 @@ final class ExpectedVersion
     /**
      * The stream should not yet exist. If it does exist treat that as a concurrency problem.
      */
+    // phpcs:ignore
     public static function NO_STREAM(): self
     {
         return new self(self::NO_STREAM);
@@ -79,7 +83,7 @@ final class ExpectedVersion
 
     public function __toString(): string
     {
-        return match($this->value) {
+        return match ($this->value) {
             self::STREAM_EXISTS => '-4 [stream exists]',
             self::ANY => '-2 [any]',
             self::NO_STREAM => '-1 [no stream]',

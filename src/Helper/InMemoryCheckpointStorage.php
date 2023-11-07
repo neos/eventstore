@@ -6,6 +6,11 @@ use Neos\EventStore\CatchUp\CheckpointStorageInterface;
 use Neos\EventStore\Exception\CheckpointException;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
+/**
+ * In-memory implementation of a checkpoint storage
+ *
+ * @internal This helper is mostly useful for testing purposes and should not be used in production
+ */
 final class InMemoryCheckpointStorage implements CheckpointStorageInterface
 {
 
@@ -50,6 +55,7 @@ final class InMemoryCheckpointStorage implements CheckpointStorageInterface
         return array_key_exists($this->subscriptionId, self::$activeTransactions);
     }
 
+    // phpcs:ignore
     public static function _resetTransactions(): void
     {
         self::$activeTransactions = [];

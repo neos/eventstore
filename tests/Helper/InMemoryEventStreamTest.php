@@ -7,14 +7,16 @@ use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventMetadata;
-use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\EventType;
-use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
+use Neos\EventStore\Model\EventEnvelope;
+use Neos\EventStore\Model\EventStream\EventStreamInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(InMemoryEventStream::class)]
 final class InMemoryEventStreamTest extends TestCase
 {
 

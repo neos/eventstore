@@ -8,6 +8,7 @@ use Webmozart\Assert\Assert;
 /**
  * A Virtual stream name synthesize multiple streams and can only be used to _read_ events.
  * Internally, virtual stream names start with a "$"
+ * @api
  */
 final class VirtualStreamName
 {
@@ -19,7 +20,8 @@ final class VirtualStreamName
     private function __construct(
         public readonly VirtualStreamType $type,
         public readonly string $value,
-    ) {}
+    ) {
+    }
 
     private static function constant(VirtualStreamType $type, string $value): self
     {

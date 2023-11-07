@@ -17,8 +17,10 @@ use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(CatchUp::class)]
 final class CatchUpTest extends TestCase
 {
 
@@ -28,9 +30,9 @@ final class CatchUpTest extends TestCase
         $eventHandler = fn () => null;
         $mockCheckpointStorage = $this->getMockBuilder(CheckpointStorageInterface::class)->getMock();
         $highestAppliedSequenceNumber = SequenceNumber::none();
-        $mockCheckpointStorage->method('acquireLock')->will($this->returnCallback(function() use (&$highestAppliedSequenceNumber) {
+        $mockCheckpointStorage->method('acquireLock')->willReturnCallback(function () use (&$highestAppliedSequenceNumber) {
             return $highestAppliedSequenceNumber;
-        }));
+        });
         $mockCheckpointStorage->expects(self::atLeastOnce())->method('updateAndReleaseLock')->willReturnCallback(function(SequenceNumber $sequenceNumber) use (&$highestAppliedSequenceNumber) {
             $highestAppliedSequenceNumber = $sequenceNumber;
         });
@@ -47,9 +49,9 @@ final class CatchUpTest extends TestCase
         $eventHandler = fn () => null;
         $mockCheckpointStorage = $this->getMockBuilder(CheckpointStorageInterface::class)->getMock();
         $highestAppliedSequenceNumber = SequenceNumber::none();
-        $mockCheckpointStorage->method('acquireLock')->will($this->returnCallback(function() use (&$highestAppliedSequenceNumber) {
+        $mockCheckpointStorage->method('acquireLock')->willReturnCallback(function () use (&$highestAppliedSequenceNumber) {
             return $highestAppliedSequenceNumber;
-        }));
+        });
         $mockCheckpointStorage->expects(self::atLeastOnce())->method('updateAndReleaseLock')->willReturnCallback(function(SequenceNumber $sequenceNumber) use (&$highestAppliedSequenceNumber) {
             $highestAppliedSequenceNumber = $sequenceNumber;
         });

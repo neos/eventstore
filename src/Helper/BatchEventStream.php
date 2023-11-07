@@ -5,6 +5,16 @@ namespace Neos\EventStore\Helper;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
+/**
+ * A wrapper that allows to process any instance of {@see EventStreamInterface} in batches
+ * This can be used to stream over a large amount of events without having to load each event individually (or to load all events into memory even)
+ *
+ * Usage:
+ *
+ * $stream = BatchEventStream::create($originalStream, 100); // for a batch size of 100
+ *
+ * @api
+ */
 final class BatchEventStream implements EventStreamInterface
 {
     private function __construct(
@@ -20,6 +30,10 @@ final class BatchEventStream implements EventStreamInterface
         }
     }
 
+    /**
+     * @param EventStreamInterface $wrappedEventStream The original event stream that will be processed in batches
+     * @param int $batchSize Number of events to load at once
+     */
     public static function create(EventStreamInterface $wrappedEventStream, int $batchSize): self
     {
         return new self($wrappedEventStream, $batchSize, null, null, null, false);

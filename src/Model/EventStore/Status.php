@@ -2,6 +2,12 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStore;
 
+use Neos\EventStore\ProvidesStatusInterface;
+
+/**
+ * The result of a {@see ProvidesStatusInterface::status()} call
+ * @api
+ */
 final class Status
 {
     /**
@@ -13,7 +19,8 @@ final class Status
         public readonly array $errors,
         public readonly array $warnings,
         public readonly array $notices,
-    ) {}
+    ) {
+    }
 
     public static function success(string $notice = null): self
     {

@@ -2,7 +2,6 @@
 declare(strict_types=1);
 namespace Neos\EventStore\CatchUp;
 
-use Neos\EventStore\DoctrineAdapter\DoctrineCheckpointStorage;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
@@ -16,9 +15,8 @@ use Webmozart\Assert\Assert;
  * It ensures that a given projection **never runs concurrently** and thus prevents race conditions where the same
  * projector is accidentally running multiple times in parallel.
  *
- * If you use the {@see DoctrineCheckpointStorage}, and share the same database connection with your projection,
- * this class **implements Exactly-Once Semantics for your projections**, to ensure each event is seen
- * EXACTLY once in your projection.
+ * If you use the {@see \Neos\EventStore\DoctrineAdapter\DoctrineCheckpointStorage}, and share the same database connection with your projection,
+ * this class **implements Exactly-Once Semantics for your projections**, to ensure each event is seen EXACTLY once in your projection.
  *
  * ## How does it work?
  *
@@ -29,9 +27,9 @@ use Webmozart\Assert\Assert;
  * After every batchSize events (typically after every event), we update the sequence number and commit
  * the transaction (via {@see CheckpointStorageInterface::updateAndReleaseLock()}). Then, we open a new transaction.
  *
- * In case of errors, we rollback the transaction.
- *
- * TODO: can you use own transactions in your projection code? I (SK) am currently not sure about this.
+ * In case of errors, the transaction is rolled back. So event listeners with their own state best share the same
+ * database connection.
+ * If a new transaction is started on the same connection within the event listener callback, the transaction will be nested (@see https://www.doctrine-project.org/projects/doctrine-dbal/en/3.7/reference/transactions.html#transaction-nesting)
  *
  * ## Example Usage (inside your projection)
  *
@@ -90,9 +88,17 @@ use Webmozart\Assert\Assert;
  *     }
  * }
  * ```
+ *
+ * @api
  */
 final class CatchUp
 {
+    /**
+     * @param \Closure(EventEnvelope): void $eventHandler The callback that is invoked for every {@see EventEnvelope} that is processed
+     * @param CheckpointStorageInterface $checkpointStorage The checkpoint storage that saves the last processed {@see SequenceNumber}
+     * @param int $batchSize Number of events to process before the checkpoint is written (defaults to 1 in order to guarantee exactly-once semantics) – ({@see withBatchSize()})
+     * @param \Closure(): void|null $onBeforeBatchCompletedHook Optional callback that is invoked before the sequence number is updated ({@see withOnBeforeBatchCompleted()})
+     */
     private function __construct(
         private readonly \Closure $eventHandler,
         private readonly CheckpointStorageInterface $checkpointStorage,
@@ -102,16 +108,19 @@ final class CatchUp
         Assert::positiveInteger($batchSize);
     }
 
-    public static function create(\Closure $eventApplier, CheckpointStorageInterface $checkpointStorage): self
+    /**
+     * @param \Closure(EventEnvelope): void $eventHandler The callback that is invoked for every {@see EventEnvelope} that is processed
+     * @param CheckpointStorageInterface $checkpointStorage The checkpoint storage that saves the last processed {@see SequenceNumber}
+     */
+    public static function create(\Closure $eventHandler, CheckpointStorageInterface $checkpointStorage): self
     {
-        return new self($eventApplier, $checkpointStorage, 1, null);
+        return new self($eventHandler, $checkpointStorage, 1, null);
     }
 
     /**
      * After how many events should the (database) transaction be committed?
      *
-     * @param int $batchSize
-     * @return $this
+     * @param int $batchSize Number of events to process before the checkpoint is written
      */
     public function withBatchSize(int $batchSize): self
     {
@@ -128,33 +137,40 @@ final class CatchUp
      *
      * Overrides all previously registered onBeforeBatchCompleted hooks.
      *
-     * @param Closure $callback the hook being called before the batch is completed
-     * @return $this
+     * @param \Closure(): void $callback the hook being called before the batch is completed
      */
     public function withOnBeforeBatchCompleted(\Closure $callback): self
     {
         return new self($this->eventHandler, $this->checkpointStorage, $this->batchSize, $callback);
     }
 
+    /**
+     * Iterate over the $eventStream, invoke the specified event handler closure for every {@see EventEnvelope} and update
+     * the last processed sequence number in the {@see CheckpointStorageInterface}
+     *
+     * @param EventStreamInterface $eventStream The event stream to process
+     * @return SequenceNumber The last processed {@see SequenceNumber}
+     * @throws Throwable Exceptions that are thrown during callback handling are re-thrown
+     */
     public function run(EventStreamInterface $eventStream): SequenceNumber
     {
         $highestAppliedSequenceNumber = $this->checkpointStorage->acquireLock();
         $iteration = 0;
         try {
-            foreach ($eventStream->withMinimumSequenceNumber($highestAppliedSequenceNumber->next()) as $event) {
-                if ($event->sequenceNumber->value <= $highestAppliedSequenceNumber->value) {
+            foreach ($eventStream->withMinimumSequenceNumber($highestAppliedSequenceNumber->next()) as $eventEnvelope) {
+                if ($eventEnvelope->sequenceNumber->value <= $highestAppliedSequenceNumber->value) {
                     continue;
                 }
-                ($this->eventHandler)($event);
+                ($this->eventHandler)($eventEnvelope);
                 $iteration ++;
                 if ($this->batchSize === 1 || $iteration % $this->batchSize === 0) {
                     if ($this->onBeforeBatchCompletedHook) {
                         ($this->onBeforeBatchCompletedHook)();
                     }
-                    $this->checkpointStorage->updateAndReleaseLock($event->sequenceNumber);
+                    $this->checkpointStorage->updateAndReleaseLock($eventEnvelope->sequenceNumber);
                     $highestAppliedSequenceNumber = $this->checkpointStorage->acquireLock();
                 } else {
-                    $highestAppliedSequenceNumber = $event->sequenceNumber;
+                    $highestAppliedSequenceNumber = $eventEnvelope->sequenceNumber;
                 }
             }
         } finally {

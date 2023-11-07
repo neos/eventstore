@@ -17,6 +17,11 @@ use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
 
+/**
+ * In-memorry implementation of an event store
+ *
+ * @internal This helper is mostly useful for testing purposes and should not be used in production
+ */
 final class InMemoryEventStore implements EventStoreInterface
 {
     /**
@@ -35,7 +40,6 @@ final class InMemoryEventStore implements EventStoreInterface
                 VirtualStreamType::CATEGORY => array_filter($this->events, static fn (EventEnvelope $event) => str_starts_with($event->streamName->value, $streamName->value)),
                 VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->metadata->get('correlationId') === $streamName->value),
             },
-            default => $this->events,
         };
         if ($filter !== null && $filter->eventTypes !== null) {
             $events = array_filter($events, static fn (EventEnvelope $event) => $filter->eventTypes->contains($event->event->type));

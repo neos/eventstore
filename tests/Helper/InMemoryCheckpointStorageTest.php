@@ -5,7 +5,9 @@ namespace Neos\EventStore\Tests\Helper;
 use Neos\EventStore\CatchUp\CheckpointStorageInterface;
 use Neos\EventStore\Helper\InMemoryCheckpointStorage;
 use Neos\EventStore\Tests\AbstractCheckpointStorageTestBase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
+#[CoversClass(InMemoryCheckpointStorage::class)]
 final class InMemoryCheckpointStorageTest extends AbstractCheckpointStorageTestBase
 {
 

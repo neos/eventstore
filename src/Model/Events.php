@@ -10,6 +10,7 @@ use Webmozart\Assert\Assert;
 
 /**
  * @implements \IteratorAggregate<Event>
+ * @api
  */
 final class Events implements \IteratorAggregate, \Countable
 {

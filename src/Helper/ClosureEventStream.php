@@ -2,9 +2,15 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Helper;
 
+use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\Event\SequenceNumber;
 
+/**
+ * Implementation of an event stream that forwards iteration to a custom \Closure
+ *
+ * @internal This helper is mostly useful for testing purposes and should not be used in production
+ */
 final class ClosureEventStream implements EventStreamInterface
 {
 
@@ -14,8 +20,12 @@ final class ClosureEventStream implements EventStreamInterface
         private readonly ?SequenceNumber $maximumSequenceNumber,
         private readonly ?int $limit,
         private readonly bool $backwards,
-    ) {}
+    ) {
+    }
 
+    /**
+     * @param \Closure(?SequenceNumber, ?SequenceNumber, ?int, bool): \Traversable<EventEnvelope>  $closure
+     */
     public static function create(\Closure $closure): self
     {
         return new self($closure, null, null, null, false);
