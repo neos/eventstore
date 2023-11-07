@@ -9,12 +9,29 @@
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
-        "phpunit/phpunit": "^9"
+        "phpstan/phpstan": "^1.10",
+        "squizlabs/php_codesniffer": "^4.0.x-dev",
+        "phpunit/phpunit": "^9 || ^10"
     },
     "autoload": {
         "psr-4": {
-            "Neos\\EventStore\\": "src/",
+            "Neos\\EventStore\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
             "Neos\\EventStore\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "test:phpstan": "phpstan",
+        "test:cs": "phpcs --colors src",
+        "test:cs:fix": "phpcbf --colors src",
+        "test:unit": "phpunit",
+        "test": [
+            "@test:phpstan",
+            "@test:cs",
+            "@test:unit"
+        ]
     }
 }
