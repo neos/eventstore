@@ -1,5 +1,16 @@
 # General purpose event store
 
+This package provides interfaces and helpers to create Event-Sourced systems with PHP
+
+## Scope
+
+In contrast to [Neos.EventSourcing](https://github.com/neos/Neos.EventSourcing) this package provides merely the low-level
+building blocks, has just a couple of dependencies and is less opinionated.
+
+> **Note**
+> This package mostly contains interfaces and implementations of Data Transfer Objects. To actually persist events,
+> a corresponding adapter package is required, for example [neos/eventstore-doctrineadapter](https://github.com/neos/eventstore-doctrineadapter)
+
 ## Usage
 
 Install via [composer](https://getcomposer.org):
@@ -7,10 +18,6 @@ Install via [composer](https://getcomposer.org):
 ```shell
 composer require neos/eventstore
 ```
-
-> **Note**
-> This package mostly contains interfaces and implementations of Data Transfer Objects. To actually persist events,
-> a corresponding adapter package is required, for example [neos/eventstore-doctrineadapter](https://github.com/neos/eventstore-doctrineadapter)
 
 ### Appending events
 
