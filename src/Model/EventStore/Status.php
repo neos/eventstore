@@ -13,7 +13,8 @@ final class Status
         public readonly array $errors,
         public readonly array $warnings,
         public readonly array $notices,
-    ) {}
+    ) {
+    }
 
     public static function success(string $notice = null): self
     {

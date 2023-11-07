@@ -5,8 +5,11 @@ namespace Neos\EventStore\Tests;
 use Neos\EventStore\CatchUp\CheckpointStorageInterface;
 use Neos\EventStore\Exception\CheckpointException;
 use Neos\EventStore\Model\Event\SequenceNumber;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
+#[CoversNothing]
 abstract class AbstractCheckpointStorageTestBase extends TestCase
 {
     abstract protected function createCheckpointStorage(string $subscriptionId): CheckpointStorageInterface;

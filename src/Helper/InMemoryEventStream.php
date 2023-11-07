@@ -18,7 +18,8 @@ final class InMemoryEventStream implements EventStreamInterface
         private readonly ?SequenceNumber $maximumSequenceNumber,
         private readonly ?int $limit,
         private readonly bool $backwards,
-    ) {}
+    ) {
+    }
 
     public static function create(EventEnvelope ...$events): self
     {

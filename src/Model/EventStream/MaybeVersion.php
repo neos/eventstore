@@ -8,7 +8,8 @@ final class MaybeVersion
 {
     private function __construct(
         private readonly ?Version $version
-    ) {}
+    ) {
+    }
 
     public static function fromVersionOrNull(?Version $version): self
     {

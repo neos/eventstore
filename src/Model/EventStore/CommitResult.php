@@ -10,5 +10,6 @@ final class CommitResult
     public function __construct(
         public readonly Version        $highestCommittedVersion,
         public readonly SequenceNumber $highestCommittedSequenceNumber,
-    ) {}
+    ) {
+    }
 }

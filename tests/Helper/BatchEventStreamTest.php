@@ -14,8 +14,10 @@ use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(BatchEventStream::class)]
 final class BatchEventStreamTest extends TestCase
 {
 

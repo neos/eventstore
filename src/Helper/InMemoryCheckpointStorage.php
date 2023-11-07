@@ -50,6 +50,7 @@ final class InMemoryCheckpointStorage implements CheckpointStorageInterface
         return array_key_exists($this->subscriptionId, self::$activeTransactions);
     }
 
+    // phpcs:ignore
     public static function _resetTransactions(): void
     {
         self::$activeTransactions = [];

@@ -16,7 +16,8 @@ final class StreamName
 
     private function __construct(
         public readonly string $value
-    ) {}
+    ) {
+    }
 
     private static function constant(string $value): self
     {

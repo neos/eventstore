@@ -17,5 +17,6 @@ final class Event
         public readonly EventType $type,
         public readonly EventData $data,
         public readonly EventMetadata $metadata,
-    ) {}
+    ) {
+    }
 }

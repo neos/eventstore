@@ -18,5 +18,6 @@ final class EventEnvelope
         public readonly Version $version,
         public readonly SequenceNumber $sequenceNumber,
         public readonly \DateTimeImmutable $recordedAt,
-    ) {}
+    ) {
+    }
 }

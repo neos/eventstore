@@ -11,7 +11,8 @@ final class EventMetadata
      */
     private function __construct(
         public readonly array $value,
-    ) {}
+    ) {
+    }
 
     /**
      * @param array<mixed> $value
