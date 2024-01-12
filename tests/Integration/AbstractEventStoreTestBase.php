@@ -19,7 +19,6 @@ use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Events;
-use Neos\EventStore\ProvidesSetupInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 
@@ -232,9 +231,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     {
         if ($this->eventStore === null) {
             $this->eventStore = $this->createEventStore();
-            if ($this->eventStore instanceof ProvidesSetupInterface) {
-                $this->eventStore->setup();
-            }
+            $this->eventStore->setup();
         }
         return $this->eventStore;
     }
