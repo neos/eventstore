@@ -2,38 +2,34 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStore;
 
-use Neos\EventStore\ProvidesStatusInterface;
-
 /**
- * The result of a {@see ProvidesStatusInterface::status()} call
+ * The result of a {@see EventStoreInterface::status()} call
  * @api
  */
 final class Status
 {
     /**
-     * @param string[] $errors
-     * @param string[] $warnings
-     * @param string[] $notices
+     * @param StatusType $type The type of status
+     * @param string $details Further technical details about the status
      */
     private function __construct(
-        public readonly array $errors,
-        public readonly array $warnings,
-        public readonly array $notices,
+        public readonly StatusType $type,
+        public readonly string $details,
     ) {
     }
 
-    public static function success(string $notice = null): self
+    public static function ok(): self
     {
-        return new self([], [], $notice !== null ? [$notice] : []);
+        return new self(StatusType::OK, '');
     }
 
-    public static function error(string $error): self
+    public static function error(string $details): self
     {
-        return new self([$error], [], []);
+        return new self(StatusType::ERROR, $details);
     }
 
-    public static function warning(string $warning): self
+    public static function setupRequired(string $details): self
     {
-        return new self([], [$warning], []);
+        return new self(StatusType::SETUP_REQUIRED, $details);
     }
 }

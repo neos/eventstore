@@ -3,7 +3,6 @@ declare(strict_types=1);
 namespace Neos\EventStore\CatchUp;
 
 use Neos\EventStore\Model\Event\SequenceNumber;
-use Neos\EventStore\ProvidesSetupInterface;
 
 /**
  * Contract for a central authority that keeps track of which event has been processed by a single event listener to prevent
@@ -24,8 +23,6 @@ interface CheckpointStorageInterface
     /**
      * Obtain an exclusive lock (to prevent multiple instances from being executed simultaneously)
      * and return the highest {@see SequenceNumber} that was processed by this checkpoint storage.
-     *
-     * Note: Some implementations require to be initialized once ({@see ProvidesSetupInterface})
      *
      * @return SequenceNumber The sequence number that was previously set via {@see updateAndReleaseLock()} or SequenceNumber(0) if it was not updated before
      */

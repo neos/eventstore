@@ -6,6 +6,7 @@ use Neos\EventStore\Exception\ConcurrencyException;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStore\CommitResult;
+use Neos\EventStore\Model\EventStore\Status;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
@@ -19,6 +20,17 @@ use Neos\EventStore\Model\Events;
  */
 interface EventStoreInterface
 {
+
+    /**
+     * Sets up this event store instance (e.g. by creating required database tables etc.)
+     */
+    public function setup(): void;
+
+    /**
+     * Returns the status of this event store instance, e.g. whether a {@see self::setup()} invocation is required
+     */
+    public function status(): Status;
+
     /**
      * Load events from the specified stream (or virtual stream) in the order they were persisted, optionally applying a filter
      *

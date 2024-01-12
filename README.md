@@ -7,7 +7,7 @@ This package provides interfaces and helpers to create Event-Sourced systems wit
 In contrast to [Neos.EventSourcing](https://github.com/neos/Neos.EventSourcing) this package provides merely the low-level
 building blocks, has just a couple of dependencies and is less opinionated.
 
-> **Note**
+> [!NOTE]
 > This package mostly contains interfaces and implementations of Data Transfer Objects. To actually persist events,
 > a corresponding adapter package is required, for example [neos/eventstore-doctrineadapter](https://github.com/neos/eventstore-doctrineadapter)
 
@@ -101,7 +101,7 @@ $stream = $eventStore->load(
 );
 ```
 
-> **Note**
+> [!NOTE]
 > Filtering events based on their type is a low-level optimization that is usually not required and should only be applied if needed
 
 #### Navigate the event stream
@@ -141,7 +141,8 @@ The following example deletes all events from "some-stream":
 $eventStore->deleteStream(StreamName::fromString('some-stream'));
 ```
 
-> **Warning** For obvious reasons, this method should only be used with great care.
+> [!WARNING]
+> For obvious reasons, this method should only be used with great care.
 > Mostly there are better ways to solve issues that seem to require deletion of events.
 > Also note, that some Event store implementations might not support this feature
 
