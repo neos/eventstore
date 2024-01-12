@@ -13,6 +13,8 @@ use Webmozart\Assert\Assert;
  */
 final class StreamName
 {
+    public const MAX_LENGTH = 200;
+
     /**
      * @var array<string, self>
      */
@@ -21,6 +23,8 @@ final class StreamName
     private function __construct(
         public readonly string $value
     ) {
+        Assert::stringNotEmpty($value, 'The stream name must not be empty');
+        Assert::maxLength($value, self::MAX_LENGTH, 'The stream name must not exceed ' . self::MAX_LENGTH . ' characters');
     }
 
     private static function constant(string $value): self
@@ -30,7 +34,6 @@ final class StreamName
 
     public static function fromString(string $value): self
     {
-        Assert::stringNotEmpty($value, 'The stream name must not be empty');
         return self::constant($value);
     }
 
