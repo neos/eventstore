@@ -11,8 +11,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 final class InMemoryEventStoreTest extends AbstractEventStoreTestBase
 {
 
-    protected function createEventStore(): EventStoreInterface
+    protected static function createEventStore(): EventStoreInterface
     {
         return new InMemoryEventStore();
+    }
+
+    protected static function resetEventStore(): void
+    {
     }
 }
