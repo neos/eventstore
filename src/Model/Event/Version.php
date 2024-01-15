@@ -13,7 +13,7 @@ final class Version
     private function __construct(
         public readonly int $value
     ) {
-        Assert::natural($this->value, 'Version has to be a natural integer (>= 0)');
+        Assert::natural($this->value, 'Version has to be a non-negative integer, got: %s');
     }
 
     public static function fromInteger(int $value): self

@@ -21,6 +21,7 @@ final class EventMetadata
     private function __construct(
         public readonly array $value,
     ) {
+        Assert::isMap($value, 'Metadata has to be an associative array with string keys');
     }
 
     /**
@@ -44,7 +45,6 @@ final class EventMetadata
             throw new \RuntimeException(sprintf('Failed to decode metadata from JSON: %s', $json), 1651749503, $e);
         }
         Assert::isArray($decoded, 'Metadata has to be encoded as array, given');
-        Assert::isMap($decoded, 'Metadata has to be an associative array with string keys');
         return new self($decoded);
     }
 
