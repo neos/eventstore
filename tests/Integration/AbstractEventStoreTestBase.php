@@ -219,9 +219,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             try {
                 static::createEventStore()->commit($streamName, Events::fromArray($events), $expectedVersion);
             } catch (ConcurrencyException $e) {
-            } catch (\Exception $e) {
-                echo get_debug_type($e);
-                exit;
+                // Concurrency exceptions are ignored because we expect them when running multiple instances in parallel
             }
         }
         self::assertTrue(true);
