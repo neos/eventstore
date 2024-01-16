@@ -17,6 +17,7 @@ final class CausationId
         public readonly string $value,
     ) {
         Assert::maxLength($value, self::MAX_LENGTH, 'The causation id must not exceed ' . self::MAX_LENGTH . ' characters');
+        Assert::regex($value, '/^[[:ascii:]]+$/', 'The causation id must only contain ASCII characters, given');
     }
 
     public static function fromString(string $value): self
