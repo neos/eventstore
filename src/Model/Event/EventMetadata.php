@@ -9,7 +9,6 @@ use Webmozart\Assert\Assert;
  * Arbitrary metadata that can be attached to events, serialized as JSON
  *
  * *Note:* The values can consist of a dictionary with arbitrary string-keys and any value that can be JSON encoded
- * but the keys "correlationId" and "causationId" have a special meaning (@see VirtualStreamType::CORRELATION_ID})
  *
  * @api
  */
@@ -32,17 +31,12 @@ final class EventMetadata
         return new self($value);
     }
 
-    public static function none(): self
-    {
-        return new self([]);
-    }
-
     public static function fromJson(string $json): self
     {
         try {
             $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
-            throw new \RuntimeException(sprintf('Failed to decode metadata from JSON: %s', $json), 1651749503, $e);
+            throw new \InvalidArgumentException(sprintf('Failed to decode metadata from JSON: %s', $json), 1651749503, $e);
         }
         Assert::isArray($decoded, 'Metadata has to be encoded as array, given');
         return new self($decoded);
