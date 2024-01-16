@@ -32,7 +32,6 @@ final class ClosureEventStreamTest extends TestCase
                     EventId::create(),
                     EventType::fromString('SomeEventType'),
                     EventData::fromString($result),
-                    EventMetadata::none(),
                 ),
                 StreamName::fromString('some-stream'),
                 Version::fromInteger(1),

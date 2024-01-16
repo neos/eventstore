@@ -2,10 +2,6 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model;
 
-use Neos\EventStore\Model\Event\EventData;
-use Neos\EventStore\Model\Event\EventId;
-use Neos\EventStore\Model\Event\EventMetadata;
-use Neos\EventStore\Model\Event\EventType;
 use Webmozart\Assert\Assert;
 
 /**
@@ -28,11 +24,6 @@ final class Events implements \IteratorAggregate, \Countable
     public static function with(Event $event): self
     {
         return new self($event);
-    }
-
-    public static function single(EventId $id, EventType $type, EventData $data, EventMetadata $metadata): self
-    {
-        return new self(new Event($id, $type, $data, $metadata));
     }
 
     /**

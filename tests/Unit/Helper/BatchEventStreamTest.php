@@ -31,7 +31,6 @@ final class BatchEventStreamTest extends TestCase
                     EventId::create(),
                     EventType::fromString('SomeEventType'),
                     EventData::fromString($char),
-                    EventMetadata::none(),
                 ),
                 StreamName::fromString('some-stream'),
                 Version::fromInteger($index),

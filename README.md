@@ -26,7 +26,7 @@ composer require neos/eventstore
 ```php
 $eventStore->commit(
     streamName: StreamName::fromString('some-stream'),
-    events: Events::single(EventId::create(), EventType::fromString('SomeEventType'), EventData::fromString('{"foo": "bar"}'), EventMetadata::none()),
+    events: new Event(EventId::create(), EventType::fromString('SomeEventType'), EventData::fromString('{"foo": "bar"}')),
     expectedVersion: ExpectedVersion::ANY(),
 );
 ```
@@ -38,8 +38,8 @@ $correlationId = Uuid::uuid4()->toString();
 $eventStore->commit(
     streamName: StreamName::fromString('some-stream'),
     events: Events::fromArray([
-        new Event(EventId::create(), EventType::fromString('SomeEventType'), EventData::fromString('foo'), EventMetadata::fromArray(['correlationId' => $correlationId])),
-        new Event(EventId::create(), EventType::fromString('SomeOtherType'), EventData::fromString('bar'), EventMetadata::fromArray(['correlationId' => $correlationId])),
+        new Event(EventId::create(), EventType::fromString('SomeEventType'), EventData::fromString('foo'), correlationId: $correlationId),
+        new Event(EventId::create(), EventType::fromString('SomeOtherType'), EventData::fromString('bar'), correlationId: $correlationId])),
     ]),
     expectedVersion: ExpectedVersion::ANY(),
 );

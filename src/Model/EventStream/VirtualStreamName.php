@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStream;
 
-use Neos\EventStore\Model\EventStream\VirtualStreamType;
+use Neos\EventStore\Model\Event\CorrelationId;
 use Webmozart\Assert\Assert;
 
 /**
@@ -35,10 +35,10 @@ final class VirtualStreamName
         return self::constant(VirtualStreamType::CATEGORY, $categoryName);
     }
 
-    public static function forCorrelationId(string $correlationId): self
+    public static function forCorrelationId(CorrelationId $correlationId): self
     {
         Assert::stringNotEmpty($correlationId);
-        return self::constant(VirtualStreamType::CORRELATION_ID, $correlationId);
+        return self::constant(VirtualStreamType::CORRELATION_ID, $correlationId->value);
     }
 
     public static function all(): self

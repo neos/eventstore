@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore;
 
 use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStore\CommitResult;
@@ -44,12 +45,12 @@ interface EventStoreInterface
      * Append one or more events to the specified stream
      *
      * @param StreamName $streamName Name of the stream to append the event(s) to
-     * @param Events $events The events to append to the stream
+     * @param Event|Events $events The event(s) to append to the stream
      * @param ExpectedVersion $expectedVersion The expected {@see Version} of the last event in the specified stream
      * @return CommitResult The result of this call that contains information about the committed {@see Version} and {@see SequenceNumber}
      * @throws ConcurrencyException in case that the $expectedVersion check fails
      */
-    public function commit(StreamName $streamName, Events $events, ExpectedVersion $expectedVersion): CommitResult;
+    public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult;
 
     /**
      * Permanently remove all events from the specified stream

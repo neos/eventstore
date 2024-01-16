@@ -120,12 +120,12 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitDummyEvents();
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
-            ['sequenceNumber' => 1, 'type' => 'SomeEventType', 'data' => 'a', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 0],
-            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
-            ['sequenceNumber' => 3, 'type' => 'SomeEventType', 'data' => 'c', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 2],
-            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
-            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 1],
-            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 1, 'type' => 'SomeEventType', 'data' => 'a', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 0],
+            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 1],
+            ['sequenceNumber' => 3, 'type' => 'SomeEventType', 'data' => 'c', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 2],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 1],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
@@ -141,9 +141,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitDummyEvents();
 
         self::assertEventStream($this->getEventStore()->load(StreamName::fromString('second-stream')), [
-            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
-            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 1],
-            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 1],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
@@ -159,9 +159,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitDummyEvents();
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all(), EventStreamFilter::create(eventTypes: EventTypes::create(EventType::fromString('SomeOtherEventType')))), [
-            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => [], 'streamName' => 'first-stream', 'version' => 1],
-            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 0],
-            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => [], 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 1],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
@@ -214,7 +214,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             for ($i = 0; $i < $numberOfEvents; $i++) {
                 $descriptor = $process . '(' . getmypid() . ') ' . $eventBatch . '.' . ($i + 1) . '/' . $numberOfEvents;
                 $eventData = $i > 0 ? ['descriptor' => $descriptor] : ['expectedVersion' => $expectedVersion->value, 'descriptor' => $descriptor];
-                $events[] = new Event(EventId::create(), self::either(...$eventTypes), EventData::fromString(json_encode($eventData, JSON_THROW_ON_ERROR)), EventMetadata::none());
+                $events[] = new Event(EventId::create(), self::either(...$eventTypes), EventData::fromString(json_encode($eventData, JSON_THROW_ON_ERROR)));
             }
             try {
                 static::createEventStore()->commit($streamName, Events::fromArray($events), $expectedVersion);
@@ -286,7 +286,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     /**
      * @param EventStreamInterface $eventStream
-     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
+     * @param array<array{id?: string, type?: string, data?: string, metadata?: ?array<mixed>, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
      */
     final protected static function assertEventStream(EventStreamInterface $eventStream, array $expectedEvents): void
     {
@@ -355,7 +355,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             isset($event['id']) ? EventId::fromString($event['id']) : EventId::create(),
             EventType::fromString($event['type'] ?? 'SomeEventType'),
             EventData::fromString($event['data'] ?? ''),
-            isset($event['metadata']) ? EventMetadata::fromArray($event['metadata']) : EventMetadata::none(),
+            isset($event['metadata']) ? EventMetadata::fromArray($event['metadata']) : null,
         );
     }
 

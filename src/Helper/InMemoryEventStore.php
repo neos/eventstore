@@ -49,7 +49,7 @@ final class InMemoryEventStore implements EventStoreInterface
             VirtualStreamName::class => match ($streamName->type) {
                 VirtualStreamType::ALL => $this->events,
                 VirtualStreamType::CATEGORY => array_filter($this->events, static fn (EventEnvelope $event) => str_starts_with($event->streamName->value, $streamName->value)),
-                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->metadata->get('correlationId') === $streamName->value),
+                VirtualStreamType::CORRELATION_ID => array_filter($this->events, static fn (EventEnvelope $eventEnvelope) => $eventEnvelope->event->correlationId?->value === $streamName->value),
             },
         };
         if ($filter !== null && $filter->eventTypes !== null) {
@@ -58,8 +58,11 @@ final class InMemoryEventStore implements EventStoreInterface
         return InMemoryEventStream::create(...$events);
     }
 
-    public function commit(StreamName $streamName, Events $events, ExpectedVersion $expectedVersion): CommitResult
+    public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult
     {
+        if ($events instanceof Event) {
+            $events = Events::fromArray([$events]);
+        }
         $maybeVersion = $this->getStreamVersion($streamName);
         $expectedVersion->verifyVersion($maybeVersion);
         $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();

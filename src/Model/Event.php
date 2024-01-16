@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Model;
 
+use Neos\EventStore\Model\Event\CausationId;
+use Neos\EventStore\Model\Event\CorrelationId;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventMetadata;
@@ -17,7 +19,9 @@ final class Event
         public readonly EventId $id,
         public readonly EventType $type,
         public readonly EventData $data,
-        public readonly EventMetadata $metadata,
+        public readonly ?EventMetadata $metadata = null,
+        public readonly ?CausationId $causationId = null,
+        public readonly ?CorrelationId $correlationId = null,
     ) {
     }
 }
