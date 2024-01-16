@@ -11,13 +11,14 @@ use Webmozart\Assert\Assert;
  */
 final class EventType
 {
-    public const MAX_LENGTH = 200;
+    public const MAX_LENGTH = 100;
 
     private function __construct(
         public readonly string $value,
     ) {
         Assert::stringNotEmpty($value, 'The event type must not be empty');
         Assert::maxLength($value, self::MAX_LENGTH, 'The event type name must not exceed ' . self::MAX_LENGTH . ' characters');
+        Assert::regex($value, '/^[[:ascii:]]+$/', 'The event type must only contain ASCII characters, given: %s');
     }
 
     public static function fromString(string $value): self

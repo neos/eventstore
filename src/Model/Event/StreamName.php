@@ -13,7 +13,7 @@ use Webmozart\Assert\Assert;
  */
 final class StreamName
 {
-    public const MAX_LENGTH = 200;
+    public const MAX_LENGTH = 100;
 
     /**
      * @var array<string, self>
@@ -25,6 +25,7 @@ final class StreamName
     ) {
         Assert::stringNotEmpty($value, 'The stream name must not be empty');
         Assert::maxLength($value, self::MAX_LENGTH, 'The stream name must not exceed ' . self::MAX_LENGTH . ' characters');
+        Assert::regex($value, '/^[[:ascii:]]+$/', 'The stream name must only contain ASCII characters, given: %s');
     }
 
     private static function constant(string $value): self

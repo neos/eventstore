@@ -6,7 +6,7 @@ use Ramsey\Uuid\Uuid;
 use Webmozart\Assert\Assert;
 
 /**
- * Globally unique id of an event, usually in the form of a UUID
+ * Globally unique id of an event, in the form of a UUID
  *
  * @api
  */
@@ -17,8 +17,7 @@ final class EventId
     private function __construct(
         public readonly string $value,
     ) {
-        Assert::stringNotEmpty($value, 'The event id must not be empty');
-        Assert::maxLength($value, self::MAX_LENGTH, 'The event id must not exceed ' . self::MAX_LENGTH . ' characters');
+        Assert::length($value, self::MAX_LENGTH, 'The event id must be exactly ' . self::MAX_LENGTH . ' characters, got %s');
     }
 
     public static function create(): self
@@ -28,6 +27,6 @@ final class EventId
 
     public static function fromString(string $value): self
     {
-        return new self($value);
+        return new self(Uuid::fromString($value)->toString());
     }
 }
