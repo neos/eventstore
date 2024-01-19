@@ -66,7 +66,7 @@ This is useful for events that represent the creation of an entity:
 ```php
 $eventStore->commit(
     streamName: StreamName::fromString('customer-' . $customerId->value),
-    events: Events::single(EventId::create(), EventType::fromString('CustomerHasSignedUp'), EventData::fromString($customerData->toJson()), EventMetadata::none()),
+    events: new Event(EventId::create(), EventType::fromString('CustomerHasSignedUp'), EventData::fromString($customerData->toJson())),
     expectedVersion: ExpectedVersion::NO_STREAM(),
 );
 ```
