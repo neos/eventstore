@@ -12,6 +12,9 @@ use PHPUnit\Framework\TestCase;
 final class EventIdTest extends TestCase
 {
 
+    /**
+     * @return iterable<array<string>>
+     */
     public static function dataProvider_invalid_strings(): iterable
     {
         yield 'empty' => [''];
@@ -26,6 +29,9 @@ final class EventIdTest extends TestCase
         EventId::fromString($string);
     }
 
+    /**
+     * @return iterable<array<string>>
+     */
     public static function dataProvider_valid_strings(): iterable
     {
         yield ['ebfeefdb-d4fe-4941-9589-e1239119f8b6'];

@@ -13,12 +13,18 @@ use PHPUnit\Framework\TestCase;
 final class EventMetadataTest extends TestCase
 {
 
+    /**
+     * @return iterable<array<mixed>>
+     */
     public static function dataProvider_invalid_arrays(): iterable
     {
         yield 'simple array' => [[1, 2, 3]];
         yield 'non-associative array' => [[2 => 'foo', 3 => 'bar']];
     }
 
+    /**
+     * @param array<mixed> $array
+     */
     #[DataProvider('dataProvider_invalid_arrays')]
     public function test_fromArray_with_invalid_arrays(array $array): void
     {
@@ -26,18 +32,27 @@ final class EventMetadataTest extends TestCase
         EventMetadata::fromArray($array);
     }
 
+    /**
+     * @return iterable<array<mixed>>
+     */
     public static function dataProvider_valid_arrays(): iterable
     {
         yield 'empty array' => [[]];
         yield 'single item' => [['foo' => 'bar']];
     }
 
+    /**
+     * @param array<mixed> $array
+     */
     #[DataProvider('dataProvider_valid_arrays')]
     public function test_fromArray_with_valid_arrays(array $array): void
     {
         self::assertSame($array, EventMetadata::fromArray($array)->value);
     }
 
+    /**
+     * @return iterable<array<string>>
+     */
     public static function dataProvider_invalid_json(): iterable
     {
         yield 'empty string' => [''];
@@ -53,6 +68,9 @@ final class EventMetadataTest extends TestCase
         EventMetadata::fromJson($string);
     }
 
+    /**
+     * @return iterable<array<mixed>>
+     */
     public static function dataProvider_valid_json(): iterable
     {
         yield 'empty object' => ['{}', []];
@@ -61,6 +79,9 @@ final class EventMetadataTest extends TestCase
         yield 'object with two keys' => ['{"foo":"bar","baz":"foos"}', ['foo' => 'bar', 'baz' => 'foos']];
     }
 
+    /**
+     * @param array<mixed> $expectedResult
+     */
     #[DataProvider('dataProvider_valid_json')]
     public function test_fromJson_with_valid_strings(string $string, array $expectedResult): void
     {
