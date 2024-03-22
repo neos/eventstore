@@ -4,6 +4,7 @@ namespace Neos\EventStore\Tests\Integration;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Event\CausationId;
 use Neos\EventStore\Model\Event\EventTypes;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\Event\EventData;
@@ -120,12 +121,12 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitDummyEvents();
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
-            ['sequenceNumber' => 1, 'type' => 'SomeEventType', 'data' => 'a', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 0],
-            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 1],
-            ['sequenceNumber' => 3, 'type' => 'SomeEventType', 'data' => 'c', 'metadata' => null, 'streamName' => 'first-stream', 'version' => 2],
-            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 0],
-            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 1],
-            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => null, 'streamName' => 'second-stream', 'version' => 2],
+            ['sequenceNumber' => 1, 'type' => 'SomeEventType', 'data' => 'a', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'first-stream', 'version' => 0],
+            ['sequenceNumber' => 2, 'type' => 'SomeOtherEventType', 'data' => 'b', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'first-stream', 'version' => 1],
+            ['sequenceNumber' => 3, 'type' => 'SomeEventType', 'data' => 'c', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'first-stream', 'version' => 2],
+            ['sequenceNumber' => 4, 'type' => 'SomeOtherEventType', 'data' => 'd', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'second-stream', 'version' => 0],
+            ['sequenceNumber' => 5, 'type' => 'SomeEventType', 'data' => 'e', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'second-stream', 'version' => 1],
+            ['sequenceNumber' => 6, 'type' => 'SomeOtherEventType', 'data' => 'f', 'metadata' => null, 'causationId' => null, 'correlationId' => null, 'streamName' => 'second-stream', 'version' => 2],
         ]);
     }
 
@@ -175,6 +176,28 @@ abstract class AbstractEventStoreTestBase extends TestCase
             ['sequenceNumber' => 4],
             ['sequenceNumber' => 5],
             ['sequenceNumber' => 6],
+        ]);
+    }
+
+    public function test_loaded_events_contain_metadata(): void
+    {
+        $this->commitEvent(['metadata' => ['foo' => 'bar']]);
+        $this->commitEvent(['metadata' => ['bar' => 'baz']]);
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'metadata' => ['foo' => 'bar']],
+            ['sequenceNumber' => 2, 'metadata' => ['bar' => 'baz']],
+        ]);
+    }
+
+    public function test_loaded_events_contain_causation_and_correlation_ids(): void
+    {
+        $this->commitEvent(['causationId' => 'some-causation-id']);
+        $this->commitEvent(['correlationId' => 'some-correlation-id']);
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'causationId' => 'some-causation-id', 'correlationId' => null],
+            ['sequenceNumber' => 2, 'causationId' => null, 'correlationId' => 'some-correlation-id'],
         ]);
     }
 
@@ -273,7 +296,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     }
 
     /**
-     * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>} $event
+     * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>, causationId?: string|null, correlationId?: string|null} $event
      * @param string $streamName
      * @param ExpectedVersion|null $expectedVersion
      * @return CommitResult
@@ -290,14 +313,14 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     /**
      * @param EventStreamInterface $eventStream
-     * @param array<array{id?: string, type?: string, data?: string, metadata?: ?array<mixed>, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
+     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
      */
     final protected static function assertEventStream(EventStreamInterface $eventStream, array $expectedEvents): void
     {
         $actualEvents = [];
         $index = 0;
         foreach ($eventStream as $eventEnvelope) {
-            $actualEvents[] = self::eventEnvelopeToArray(isset($expectedEvents[$index]) ? array_keys($expectedEvents[$index]) : ['id', 'type', 'data', 'metadata', 'streamName', 'version', 'sequenceNumber', 'recordedAt'], $eventEnvelope);
+            $actualEvents[] = self::eventEnvelopeToArray(isset($expectedEvents[$index]) ? array_keys($expectedEvents[$index]) : ['id', 'type', 'data', 'metadata', 'causationId', 'correlationId', 'streamName', 'version', 'sequenceNumber', 'recordedAt'], $eventEnvelope);
             $index ++;
         }
         self::assertEquals($expectedEvents, $actualEvents);
@@ -324,11 +347,11 @@ abstract class AbstractEventStoreTestBase extends TestCase
     /**
      * @param string[] $keys
      * @param EventEnvelope $eventEnvelope
-     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
+     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
      */
     private static function eventEnvelopeToArray(array $keys, EventEnvelope $eventEnvelope): array
     {
-        $supportedKeys = ['id', 'type', 'data', 'metadata', 'streamName', 'version', 'sequenceNumber', 'recordedAt'];
+        $supportedKeys = ['id', 'type', 'data', 'metadata', 'causationId', 'correlationId', 'streamName', 'version', 'sequenceNumber', 'recordedAt'];
         $unsupportedKeys = array_diff($keys, $supportedKeys);
         if ($unsupportedKeys !== []) {
             throw new \InvalidArgumentException(sprintf('Invalid key(s) "%s" for expected event. Allowed keys are: "%s"', implode('", "', $unsupportedKeys), implode('", "', $supportedKeys)), 1651755700);
@@ -338,6 +361,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
             'type' => $eventEnvelope->event->type->value,
             'data' => $eventEnvelope->event->data->value,
             'metadata' => $eventEnvelope->event->metadata?->value,
+            'causationId' => $eventEnvelope->event->causationId?->value,
+            'correlationId' => $eventEnvelope->event->correlationId?->value,
             'streamName' => $eventEnvelope->streamName->value,
             'version' => $eventEnvelope->version->value,
             'sequenceNumber' => $eventEnvelope->sequenceNumber->value,
@@ -350,7 +375,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     }
 
     /**
-     * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>} $event
+     * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>, causationId?: string|null, correlationId?: string|null} $event
      * @return Event
      */
     private function convertEvent(array $event): Event
@@ -360,6 +385,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
             EventType::fromString($event['type'] ?? 'SomeEventType'),
             EventData::fromString($event['data'] ?? ''),
             isset($event['metadata']) ? EventMetadata::fromArray($event['metadata']) : null,
+            isset($event['causationId']) ? CausationId::fromString($event['causationId']): null,
+            isset($event['correlationId']) ? Event\CorrelationId::fromString($event['correlationId']): null,
         );
     }
 

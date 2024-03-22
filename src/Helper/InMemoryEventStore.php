@@ -77,6 +77,8 @@ final class InMemoryEventStore implements EventStoreInterface
                     $event->type,
                     $event->data,
                     $event->metadata,
+                    $event->causationId,
+                    $event->correlationId,
                 ),
                 $streamName,
                 $version,
