@@ -12,6 +12,9 @@ use PHPUnit\Framework\TestCase;
 final class EventTypeTest extends TestCase
 {
 
+    /**
+     * @return iterable<array<string>>
+     */
     public static function dataProvider_invalid_strings(): iterable
     {
         yield 'empty' => [''];
@@ -26,6 +29,9 @@ final class EventTypeTest extends TestCase
         EventType::fromString($string);
     }
 
+    /**
+     * @return iterable<array<string>>
+     */
     public static function dataProvider_valid_strings(): iterable
     {
         yield ['this-is-a-valid-event-type'];

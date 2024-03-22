@@ -186,6 +186,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
     }
 
 
+    /**
+     * @return iterable<array<int>>
+     */
     public static function commit_consistency_dataProvider(): iterable
     {
         for ($i = 0; $i < 40; $i++) {
@@ -234,6 +237,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             $sequenceNumber = $eventEnvelope->sequenceNumber->value;
             self::assertGreaterThan($lastSequenceNumber, $sequenceNumber, sprintf('Expected sequence number of event "%s" to be greater than the previous one (%d) but it is %d', $eventEnvelope->event->id->value, $lastSequenceNumber, $sequenceNumber));
             $payload = json_decode($eventEnvelope->event->data->value, true, 512, JSON_THROW_ON_ERROR);
+            self::assertIsArray($payload);
             if (!isset($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value])) {
                 self::assertSame(ExpectedVersion::NO_STREAM()->value, $payload['expectedVersion'], sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $payload['expectedVersion'], ExpectedVersion::NO_STREAM()->value));
                 self::assertSame(Version::first()->value, $eventEnvelope->version->value, sprintf('Event "%s" is the first in stream "%s" but it has a version of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $eventEnvelope->version->value, Version::first()->value));
@@ -320,7 +324,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     /**
      * @param string[] $keys
      * @param EventEnvelope $eventEnvelope
-     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
+     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
      */
     private static function eventEnvelopeToArray(array $keys, EventEnvelope $eventEnvelope): array
     {
@@ -333,7 +337,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             'id' => $eventEnvelope->event->id->value,
             'type' => $eventEnvelope->event->type->value,
             'data' => $eventEnvelope->event->data->value,
-            'metadata' => $eventEnvelope->event->metadata->value,
+            'metadata' => $eventEnvelope->event->metadata?->value,
             'streamName' => $eventEnvelope->streamName->value,
             'version' => $eventEnvelope->version->value,
             'sequenceNumber' => $eventEnvelope->sequenceNumber->value,
@@ -369,6 +373,11 @@ abstract class AbstractEventStoreTestBase extends TestCase
         return MaybeVersion::fromVersionOrNull($lastEventEnvelope?->version);
     }
 
+    /**
+     * @template T
+     * @param \Closure(int): T $closure
+     * @return array<int, T>
+     */
     private static function spawn(int $number, \Closure $closure): array
     {
         return array_map($closure, range(1, $number));
@@ -382,18 +391,6 @@ abstract class AbstractEventStoreTestBase extends TestCase
     private static function either(...$choices): mixed
     {
         return $choices[array_rand($choices)];
-    }
-
-    /**
-     * @template T
-     * @param T ...$choices
-     * @return array<T>
-     */
-    private static function some(int $max, ...$choices): array
-    {
-        $amount = self::between(1, min($max, count($choices)));
-        shuffle($choices);
-        return array_slice($choices, 0, $amount);
     }
 
     private static function between(int $min, int $max): int
