@@ -29,7 +29,7 @@ final class EventStreamFilter
      * @param EventTypes|null $eventTypes
      */
     public static function create(
-        EventTypes $eventTypes = null,
+        ?EventTypes $eventTypes = null,
     ): self {
         return new self($eventTypes);
     }
@@ -43,7 +43,7 @@ final class EventStreamFilter
      * @param EventTypes|null $eventTypes
      */
     public function with(
-        EventTypes $eventTypes = null,
+        ?EventTypes $eventTypes = null,
     ): self {
         return self::create(
             $eventTypes ?? $this->eventTypes,

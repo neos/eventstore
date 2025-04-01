@@ -39,7 +39,7 @@ interface EventStoreInterface
      * @param EventStreamFilter|null $filter Optional filter that allows to skip certain events
      * @return EventStreamInterface The resulting event stream that can be iterated
      */
-    public function load(StreamName|VirtualStreamName $streamName, EventStreamFilter $filter = null): EventStreamInterface;
+    public function load(StreamName|VirtualStreamName $streamName, ?EventStreamFilter $filter = null): EventStreamInterface;
 
     /**
      * Append one or more events to the specified stream

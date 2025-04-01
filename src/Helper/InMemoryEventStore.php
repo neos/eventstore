@@ -42,7 +42,7 @@ final class InMemoryEventStore implements EventStoreInterface
         return Status::ok();
     }
 
-    public function load(VirtualStreamName|StreamName $streamName, EventStreamFilter $filter = null): EventStreamInterface
+    public function load(VirtualStreamName|StreamName $streamName, ?EventStreamFilter $filter = null): EventStreamInterface
     {
         $events = match ($streamName::class) {
             StreamName::class => array_filter($this->events, static fn (EventEnvelope $event) => $event->streamName->equals($streamName)),

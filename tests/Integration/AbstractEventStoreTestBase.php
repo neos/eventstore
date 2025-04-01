@@ -290,7 +290,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
      * @param ExpectedVersion|null $expectedVersion
      * @return CommitResult
      */
-    final protected function commitEvents(array $events, string $streamName = 'some-stream', ExpectedVersion $expectedVersion = null): CommitResult
+    final protected function commitEvents(array $events, string $streamName = 'some-stream', ?ExpectedVersion $expectedVersion = null): CommitResult
     {
         return $this->getEventStore()->commit(StreamName::fromString($streamName), Events::fromArray(array_map($this->convertEvent(...), $events)), $expectedVersion ?? ExpectedVersion::ANY());
     }
@@ -301,7 +301,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
      * @param ExpectedVersion|null $expectedVersion
      * @return CommitResult
      */
-    final protected function commitEvent(array $event, string $streamName = 'some-stream', ExpectedVersion $expectedVersion = null): CommitResult
+    final protected function commitEvent(array $event, string $streamName = 'some-stream', ?ExpectedVersion $expectedVersion = null): CommitResult
     {
         return $this->commitEvents([$event], $streamName, $expectedVersion);
     }
