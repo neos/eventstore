@@ -192,6 +192,20 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
+    public function test_prune_does_reset_sequenceNumber(): void
+    {
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
+        $this->prune();
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('g', 'i')), 'third-stream');
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1],
+            ['sequenceNumber' => 2],
+            ['sequenceNumber' => 3],
+        ]);
+    }
+
     public function test_loaded_events_contain_metadata(): void
     {
         $this->commitEvent(['metadata' => ['foo' => 'bar']]);
@@ -322,6 +336,11 @@ abstract class AbstractEventStoreTestBase extends TestCase
     final protected function deleteStream(string $streamName): void
     {
         $this->getEventStore()->deleteStream(StreamName::fromString($streamName));
+    }
+
+    final protected function prune(): void
+    {
+        $this->getEventStore()->prune();
     }
 
     /**
