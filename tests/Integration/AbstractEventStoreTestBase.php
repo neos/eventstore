@@ -21,6 +21,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Events;
+use Neos\EventStore\PrunableEventStoreInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -32,8 +33,6 @@ abstract class AbstractEventStoreTestBase extends TestCase
     private ?EventStoreInterface $eventStore = null;
 
     abstract protected static function createEventStore(): EventStoreInterface;
-
-    abstract protected static function resetEventStore(): void;
 
     // --- Tests ----
 
@@ -168,8 +167,13 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public function test_deleteStream_does_not_reset_sequenceNumber(): void
     {
+        $eventStore = $this->getEventStore();
+        if (!$eventStore instanceof PrunableEventStoreInterface) {
+            self::markTestSkipped(sprintf('EventStore %s does not allow pruning.', $eventStore::class));
+        }
+
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
-        $this->deleteStream('first-stream');
+        $eventStore->deleteStream(StreamName::fromString('first-stream'));
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
@@ -194,9 +198,14 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public function test_prune_does_reset_sequenceNumber(): void
     {
+        $eventStore = $this->getEventStore();
+        if (!$eventStore instanceof PrunableEventStoreInterface) {
+            self::markTestSkipped(sprintf('EventStore %s does not allow pruning.', $eventStore::class));
+        }
+
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
-        $this->prune();
+        $eventStore->prune();
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('g', 'i')), 'third-stream');
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
@@ -305,7 +314,12 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public function tearDown(): void
     {
-        static::resetEventStore();
+        $eventStore = $this->getEventStore();
+
+        /** If the EventStore does not allow pruning {@see createEventStore} must return a new instance */
+        if ($eventStore instanceof PrunableEventStoreInterface) {
+            $eventStore->prune();
+        }
     }
 
 
@@ -331,16 +345,6 @@ abstract class AbstractEventStoreTestBase extends TestCase
     final protected function commitEvent(array $event, string $streamName = 'some-stream', ?ExpectedVersion $expectedVersion = null): CommitResult
     {
         return $this->commitEvents([$event], $streamName, $expectedVersion);
-    }
-
-    final protected function deleteStream(string $streamName): void
-    {
-        $this->getEventStore()->deleteStream(StreamName::fromString($streamName));
-    }
-
-    final protected function prune(): void
-    {
-        $this->getEventStore()->prune();
     }
 
     /**
