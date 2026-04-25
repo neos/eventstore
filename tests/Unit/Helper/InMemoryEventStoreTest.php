@@ -15,8 +15,4 @@ final class InMemoryEventStoreTest extends AbstractEventStoreTestBase
     {
         return new InMemoryEventStore();
     }
-
-    protected static function resetEventStore(): void
-    {
-    }
 }
