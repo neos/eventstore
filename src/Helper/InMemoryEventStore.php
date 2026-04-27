@@ -105,6 +105,7 @@ final class InMemoryEventStore implements EventStoreInterface
                 unset($this->events[$index]);
             }
         }
+        unset($this->streamVersions[$streamName->value]);
     }
 
     private function getStreamVersion(StreamName $streamName): MaybeVersion
