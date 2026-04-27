@@ -30,6 +30,11 @@ final class InMemoryEventStore implements EventStoreInterface
      */
     private array $events = [];
 
+    /**
+     * @var array<string,Version>
+     */
+    private array $streamVersions = [];
+
     private ?SequenceNumber $sequenceNumber = null;
 
     public function setup(): void
@@ -71,6 +76,7 @@ final class InMemoryEventStore implements EventStoreInterface
         $lastCommittedVersion = $version;
         foreach ($events as $event) {
             $this->sequenceNumber = $this->sequenceNumber->next();
+            $this->streamVersions[$streamName->value] = $version;
             $this->events[] = new EventEnvelope(
                 new Event(
                     $event->id,
@@ -103,13 +109,6 @@ final class InMemoryEventStore implements EventStoreInterface
 
     private function getStreamVersion(StreamName $streamName): MaybeVersion
     {
-        /** @var Version|null $version */
-        $version = null;
-        foreach ($this->events as $event) {
-            if ($event->streamName->equals($streamName)) {
-                $version = $event->version;
-            }
-        }
-        return MaybeVersion::fromVersionOrNull($version);
+        return MaybeVersion::fromVersionOrNull($this->streamVersions[$streamName->value] ?? null);
     }
 }
