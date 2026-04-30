@@ -179,6 +179,19 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
+    public function test_deleteStream_does_reset_version(): void
+    {
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream', ExpectedVersion::NO_STREAM());
+        $this->deleteStream('first-stream');
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream', ExpectedVersion::NO_STREAM());
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['streamName' => 'first-stream', 'version' => 0],
+            ['streamName' => 'first-stream', 'version' => 1],
+            ['streamName' => 'first-stream', 'version' => 2],
+        ]);
+    }
+
     public function test_loaded_events_contain_metadata(): void
     {
         $this->commitEvent(['metadata' => ['foo' => 'bar']]);
