@@ -17,13 +17,14 @@ use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
+use Neos\EventStore\WithResetInterface;
 
 /**
  * In-memorry implementation of an event store
  *
  * @internal This helper is mostly useful for testing purposes and should not be used in production
  */
-final class InMemoryEventStore implements EventStoreInterface
+final class InMemoryEventStore implements EventStoreInterface, WithResetInterface
 {
     /**
      * @var EventEnvelope[]
@@ -106,6 +107,12 @@ final class InMemoryEventStore implements EventStoreInterface
             }
         }
         unset($this->streamVersions[$streamName->value]);
+    }
+
+    public function reset(): void
+    {
+        $this->events = [];
+        $this->sequenceNumber = null;
     }
 
     private function getStreamVersion(StreamName $streamName): MaybeVersion
