@@ -17,14 +17,14 @@ use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
-use Neos\EventStore\PrunableEventStoreInterface;
+use Neos\EventStore\WithResetInterface;
 
 /**
  * In-memorry implementation of an event store
  *
  * @internal This helper is mostly useful for testing purposes and should not be used in production
  */
-final class InMemoryEventStore implements EventStoreInterface, PrunableEventStoreInterface
+final class InMemoryEventStore implements EventStoreInterface, WithResetInterface
 {
     /**
      * @var EventEnvelope[]
@@ -109,7 +109,7 @@ final class InMemoryEventStore implements EventStoreInterface, PrunableEventStor
         unset($this->streamVersions[$streamName->value]);
     }
 
-    public function prune(): void
+    public function reset(): void
     {
         $this->events = [];
         $this->sequenceNumber = null;

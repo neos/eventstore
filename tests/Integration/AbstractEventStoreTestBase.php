@@ -21,7 +21,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Events;
-use Neos\EventStore\PrunableEventStoreInterface;
+use Neos\EventStore\WithResetInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -168,8 +168,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
     public function test_deleteStream_does_not_reset_sequenceNumber(): void
     {
         $eventStore = $this->getEventStore();
-        if (!$eventStore instanceof PrunableEventStoreInterface) {
-            self::markTestSkipped(sprintf('EventStore %s does not allow pruning.', $eventStore::class));
+        if (!$eventStore instanceof WithResetInterface) {
+            self::markTestSkipped(sprintf('EventStore %s does not allow reset.', $eventStore::class));
         }
 
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
@@ -185,8 +185,13 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public function test_deleteStream_does_reset_version(): void
     {
+        $eventStore = $this->getEventStore();
+        if (!$eventStore instanceof WithResetInterface) {
+            self::markTestSkipped(sprintf('EventStore %s does not allow reset.', $eventStore::class));
+        }
+
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream', ExpectedVersion::NO_STREAM());
-        $this->deleteStream('first-stream');
+        $eventStore->deleteStream(StreamName::fromString('first-stream'));
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'first-stream', ExpectedVersion::NO_STREAM());
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
@@ -196,16 +201,16 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
-    public function test_prune_does_reset_sequenceNumber(): void
+    public function test_reset_does_reset_sequenceNumber(): void
     {
         $eventStore = $this->getEventStore();
-        if (!$eventStore instanceof PrunableEventStoreInterface) {
-            self::markTestSkipped(sprintf('EventStore %s does not allow pruning.', $eventStore::class));
+        if (!$eventStore instanceof WithResetInterface) {
+            self::markTestSkipped(sprintf('EventStore %s does not allow reset.', $eventStore::class));
         }
 
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'first-stream');
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('d', 'f')), 'second-stream');
-        $eventStore->prune();
+        $eventStore->reset();
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('g', 'i')), 'third-stream');
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
@@ -317,8 +322,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $eventStore = $this->getEventStore();
 
         /** If the EventStore does not allow pruning {@see createEventStore} must return a new instance */
-        if ($eventStore instanceof PrunableEventStoreInterface) {
-            $eventStore->prune();
+        if ($eventStore instanceof WithResetInterface) {
+            $eventStore->reset();
         }
     }
 

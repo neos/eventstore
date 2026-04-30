@@ -9,7 +9,7 @@ use Neos\EventStore\Model\Event\StreamName;
  * Note: Not all implementations might support this!
  * @api
  */
-interface PrunableEventStoreInterface
+interface WithResetInterface
 {
     /**
      * Permanently remove all events from the specified stream
@@ -22,5 +22,5 @@ interface PrunableEventStoreInterface
      * Permanently remove all events from all streams.
      * The sequence number is reset.
      */
-    public function prune(): void;
+    public function reset(): void;
 }
