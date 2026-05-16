@@ -3,6 +3,9 @@ declare(strict_types=1);
 namespace Neos\EventStore\Helper;
 
 use Neos\EventStore\EventStoreInterface;
+use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Commit;
+use Neos\EventStore\Model\CommitList;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
@@ -68,34 +71,55 @@ final class InMemoryEventStore implements EventStoreInterface
         if ($events instanceof Event) {
             $events = Events::fromArray([$events]);
         }
-        $maybeVersion = $this->getStreamVersion($streamName);
-        $expectedVersion->verifyVersion($maybeVersion);
-        $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
-        $now = new \DateTimeImmutable();
-        $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
-        $lastCommittedVersion = $version;
-        foreach ($events as $event) {
-            $this->sequenceNumber = $this->sequenceNumber->next();
-            $this->streamVersions[$streamName->value] = $version;
-            $this->events[] = new EventEnvelope(
-                new Event(
-                    $event->id,
-                    $event->type,
-                    $event->data,
-                    $event->metadata,
-                    $event->causationId,
-                    $event->correlationId,
-                ),
-                $streamName,
-                $version,
-                $this->sequenceNumber,
-                $now
-            );
-            $lastCommittedVersion = $version;
-            $version = $version->next();
+        $this->commitAll(CommitList::create(new Commit(
+            streamName: $streamName,
+            events: $events,
+            expectedVersion: $expectedVersion,
+        )));
+        return new CommitResult($this->streamVersions[$streamName->value], $this->sequenceNumber);
+    }
+
+    public function commitAll(CommitList $commits): void
+    {
+        $commitedStreams = [];
+        // validation
+        foreach ($commits as $commit) {
+            if (array_key_exists($commit->streamName->value, $commitedStreams)) {
+                throw new \RuntimeException(sprintf('TODO Multiple `Commit` requests to the same stream are not implemented and should be forbidden.'), 1778940402);
+            }
+            $commitedStreams[$commit->streamName->value] = true;
+            $maybeVersion = $this->getStreamVersion($commit->streamName);
+            $commit->expectedVersion->verifyVersion($maybeVersion);
         }
 
-        return new CommitResult($lastCommittedVersion, $this->sequenceNumber);
+        // commiting
+        foreach ($commits as $commit) {
+            $maybeVersion = $this->getStreamVersion($commit->streamName);
+            $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
+            $now = new \DateTimeImmutable();
+            $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
+            $lastCommittedVersion = $version;
+            foreach ($commit->events as $event) {
+                $this->sequenceNumber = $this->sequenceNumber->next();
+                $this->streamVersions[$commit->streamName->value] = $version;
+                $this->events[] = new EventEnvelope(
+                    new Event(
+                        $event->id,
+                        $event->type,
+                        $event->data,
+                        $event->metadata,
+                        $event->causationId,
+                        $event->correlationId,
+                    ),
+                    $commit->streamName,
+                    $version,
+                    $this->sequenceNumber,
+                    $now
+                );
+                $lastCommittedVersion = $version;
+                $version = $version->next();
+            }
+        }
     }
 
     public function deleteStream(StreamName $streamName): void
