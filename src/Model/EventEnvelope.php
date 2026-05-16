@@ -11,7 +11,7 @@ use Neos\EventStore\Model\EventStream\EventStreamInterface;
  * returned when iterating over the {@see EventStreamInterface}
  * @api
  */
-final class EventEnvelope
+final readonly class EventEnvelope
 {
     /**
      * @param Event $event The actual event
@@ -21,11 +21,11 @@ final class EventEnvelope
      * @param \DateTimeImmutable $recordedAt The point in time this event has been persisted at
      */
     public function __construct(
-        public readonly Event $event,
-        public readonly StreamName $streamName,
-        public readonly Version $version,
-        public readonly SequenceNumber $sequenceNumber,
-        public readonly \DateTimeImmutable $recordedAt,
+        public Event $event,
+        public StreamName $streamName,
+        public Version $version,
+        public SequenceNumber $sequenceNumber,
+        public \DateTimeImmutable $recordedAt,
     ) {
     }
 }

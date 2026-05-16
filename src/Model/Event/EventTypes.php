@@ -13,13 +13,13 @@ use Webmozart\Assert\Assert;
  * @implements IteratorAggregate<EventType>
  * @api
  */
-final class EventTypes implements IteratorAggregate
+final readonly class EventTypes implements IteratorAggregate
 {
     /**
      * @param EventType[] $types
      */
     private function __construct(
-        public readonly array $types,
+        public array $types,
     ) {
         Assert::notEmpty($this->types, 'EventTypes must not be empty');
     }

@@ -7,10 +7,10 @@ namespace Neos\EventStore\Model\Event;
  *
  * @api
  */
-final class EventData
+final readonly class EventData
 {
     private function __construct(
-        public readonly string $value,
+        public string $value,
     ) {
     }
 
