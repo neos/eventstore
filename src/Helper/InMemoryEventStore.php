@@ -81,13 +81,8 @@ final class InMemoryEventStore implements EventStoreInterface
 
     public function commitAll(CommitList $commits): void
     {
-        $commitedStreams = [];
         // validation
         foreach ($commits as $commit) {
-            if (array_key_exists($commit->streamName->value, $commitedStreams)) {
-                throw new \RuntimeException(sprintf('TODO Multiple `Commit` requests to the same stream are not implemented and should be forbidden.'), 1778940402);
-            }
-            $commitedStreams[$commit->streamName->value] = true;
             $maybeVersion = $this->getStreamVersion($commit->streamName);
             $commit->expectedVersion->verifyVersion($maybeVersion);
         }
