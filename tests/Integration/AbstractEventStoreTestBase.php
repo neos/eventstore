@@ -347,9 +347,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => $typeClosure($char)], range('d', 'f')), 'second-stream');
     }
 
-    // --- Internal -----
-
-    private function getEventStore(): EventStoreInterface
+    final protected function getEventStore(): EventStoreInterface
     {
         if ($this->eventStore === null) {
             $this->eventStore = static::createEventStore();
@@ -392,7 +390,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
      * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>, causationId?: string|null, correlationId?: string|null} $event
      * @return Event
      */
-    private function convertEvent(array $event): Event
+    final protected function convertEvent(array $event): Event
     {
         return new Event(
             isset($event['id']) ? EventId::fromString($event['id']) : EventId::create(),
@@ -404,7 +402,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         );
     }
 
-    public function getStreamVersion(StreamName $streamName): MaybeVersion
+    final protected function getStreamVersion(StreamName $streamName): MaybeVersion
     {
         $lastEventEnvelope = null;
         foreach (static::createEventStore()->load($streamName)->backwards() as $eventEnvelope) {
