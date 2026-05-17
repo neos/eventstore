@@ -286,11 +286,16 @@ abstract class AbstractEventStoreTestBase extends TestCase
             }
             $lastSequenceNumber = $sequenceNumber;
         }
+        self::assertGreaterThan(0, $lastSequenceNumber);
     }
 
 
     public function tearDown(): void
     {
+        if ($this->name() === 'test_commit_consistency') {
+            // TODO Hack, possibly revert https://github.com/neos/eventstore/pull/14 and split test into two files
+            return;
+        }
         static::resetEventStore();
     }
 
