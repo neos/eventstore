@@ -82,18 +82,27 @@ final class InMemoryEventStore implements EventStoreInterface
     public function commitAll(CommitList $commits): void
     {
         // validation
-        foreach ($commits as $commit) {
-            $maybeVersion = $this->getStreamVersion($commit->streamName);
-            $commit->expectedVersion->verifyVersion($maybeVersion);
+        $newStreamVersions = [];
+        foreach ($commits as $index => $commit) {
+            $maybeVersion = MaybeVersion::fromVersionOrNull($newStreamVersions[$commit->streamName->value] ?? $this->streamVersions[$commit->streamName->value] ?? null);
+            if (!$commit->expectedVersion->isSatisfiedBy($maybeVersion)) {
+                if ($commits->count() === 1) {
+                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($commit->expectedVersion, $maybeVersion, $commit->streamName);
+                } else {
+                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpectedCommitAll($commit->expectedVersion, $maybeVersion, $commit->streamName, $index + 1, $commits->count());
+                }
+            }
+            $previousVersion = $maybeVersion->nextVersionOrFirst();
+            $nextVersion = $previousVersion->add(Version::fromInteger($commit->events->count()));
+            $newStreamVersions[$commit->streamName->value] = $nextVersion;
         }
 
         // commiting
         foreach ($commits as $commit) {
             $maybeVersion = $this->getStreamVersion($commit->streamName);
-            $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
+            $version = $maybeVersion->nextVersionOrFirst();
             $now = new \DateTimeImmutable();
             $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
-            $lastCommittedVersion = $version;
             foreach ($commit->events as $event) {
                 $this->sequenceNumber = $this->sequenceNumber->next();
                 $this->streamVersions[$commit->streamName->value] = $version;
@@ -111,7 +120,6 @@ final class InMemoryEventStore implements EventStoreInterface
                     $this->sequenceNumber,
                     $now
                 );
-                $lastCommittedVersion = $version;
                 $version = $version->next();
             }
         }

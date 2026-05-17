@@ -137,6 +137,24 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
+    public function test_commitAll_expectVersion_concurrencyExceptions_same_stream(): void
+    {
+        $this->expectException(ConcurrencyException::class);
+        $this->getEventStore()->commitAll(CommitList::create(
+            new Commit(StreamName::fromString('stream-1'), Events::fromArray(array_map(
+                fn (string $char) => $this->convertEvent(['data' => $char]),
+                range('a', 'c')
+            )), ExpectedVersion::NO_STREAM()),
+            new Commit(StreamName::fromString('stream-2'), Events::with(
+                $this->convertEvent(['data' => 'x'])
+            ), ExpectedVersion::ANY()),
+            new Commit(StreamName::fromString('stream-1'), Events::fromArray(array_map(
+                fn (string $char) => $this->convertEvent(['data' => $char]),
+                range('d', 'f')
+            )), ExpectedVersion::fromVersion(Version::first())),
+        ));
+    }
+
     public static function dataProvider_commit_expectVersion_success(): \Generator
     {
         yield ['streamName' => 'nonexisting-stream', ExpectedVersion::ANY()];
@@ -183,6 +201,32 @@ abstract class AbstractEventStoreTestBase extends TestCase
             ['streamName' => 'other-stream', 'sequenceNumber' => 5],
             ['streamName' => 'other-stream', 'sequenceNumber' => 6],
             ['streamName' => $streamName, 'sequenceNumber' => 7],
+        ]);
+    }
+
+    public function test_commitAll_expectVersion_success_same_stream(): void
+    {
+        $this->getEventStore()->commitAll(CommitList::create(
+            new Commit(StreamName::fromString('stream-1'), Events::fromArray(array_map(
+                fn (string $char) => $this->convertEvent(['data' => $char]),
+                range('a', 'c')
+            )), ExpectedVersion::NO_STREAM()),
+            new Commit(StreamName::fromString('stream-2'), Events::with(
+                $this->convertEvent(['data' => 'x'])
+            ), ExpectedVersion::ANY()),
+            new Commit(StreamName::fromString('stream-1'), Events::fromArray(array_map(
+                fn (string $char) => $this->convertEvent(['data' => $char]),
+                range('d', 'f')
+            )), ExpectedVersion::fromVersion(Version::fromInteger(3))),
+        ));
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['streamName' => 'stream-1', 'sequenceNumber' => 1, 'version' => 0],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 2, 'version' => 1],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 3, 'version' => 2],
+            ['streamName' => 'stream-2', 'sequenceNumber' => 4, 'version' => 0],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 5, 'version' => 3],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 6, 'version' => 4],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 7, 'version' => 5],
         ]);
     }
 
