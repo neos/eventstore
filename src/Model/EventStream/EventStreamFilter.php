@@ -13,10 +13,10 @@ use Neos\EventStore\Model\Event\EventTypes;
  *
  * @api for the public methods; NOT for the inner state.
  */
-final class EventStreamFilter
+final readonly class EventStreamFilter
 {
     private function __construct(
-        public readonly ?EventTypes $eventTypes,
+        public ?EventTypes $eventTypes,
     ) {
     }
 

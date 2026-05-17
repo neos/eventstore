@@ -12,13 +12,13 @@ use Webmozart\Assert\Assert;
  *
  * @api
  */
-final class EventMetadata
+final readonly class EventMetadata
 {
     /**
      * @param array<string, mixed> $value
      */
     private function __construct(
-        public readonly array $value,
+        public array $value,
     ) {
         Assert::isMap($value, 'Metadata has to be an associative array with string keys');
     }

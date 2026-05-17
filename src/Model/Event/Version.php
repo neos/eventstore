@@ -8,10 +8,10 @@ use Webmozart\Assert\Assert;
  * The version of an event within a single, non-virtual stream
  * @api
  */
-final class Version
+final readonly class Version
 {
     private function __construct(
-        public readonly int $value
+        public int $value
     ) {
         Assert::natural($this->value, 'Version has to be a non-negative integer, got: %s');
     }

@@ -11,11 +11,11 @@ use Neos\EventStore\Model\Event\Version;
  * about the commited {@see Version} and {@see SequenceNumber}
  * @api
  */
-final class CommitResult
+final readonly class CommitResult
 {
     public function __construct(
-        public readonly Version $highestCommittedVersion,
-        public readonly SequenceNumber $highestCommittedSequenceNumber,
+        public Version $highestCommittedVersion,
+        public SequenceNumber $highestCommittedSequenceNumber,
     ) {
     }
 }

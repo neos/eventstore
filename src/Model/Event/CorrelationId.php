@@ -9,12 +9,12 @@ use Webmozart\Assert\Assert;
  * This can be a random identifier or some id of the domain (e.g. a shopping cart id)
  * @api
  */
-final class CorrelationId
+final readonly class CorrelationId
 {
     public const MAX_LENGTH = 40;
 
     private function __construct(
-        public readonly string $value,
+        public string $value,
     ) {
         Assert::maxLength($value, self::MAX_LENGTH, 'The correlation id must not exceed ' . self::MAX_LENGTH . ' characters');
         Assert::regex($value, '/^[[:ascii:]]+$/', 'The correlation id must only contain ASCII characters, given');

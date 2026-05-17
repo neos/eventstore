@@ -66,12 +66,12 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public static function dataProvider_commit_expectVersion_concurrencyException(): \Generator
     {
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::STREAM_EXISTS()];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::fromVersion(Version::first())];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::NO_STREAM()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::first())];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
+        yield ['nonexisting-stream', ExpectedVersion::STREAM_EXISTS()];
+        yield ['nonexisting-stream', ExpectedVersion::fromVersion(Version::first())];
+        yield ['nonexisting-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
+        yield ['existing-stream', ExpectedVersion::NO_STREAM()];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::first())];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
     }
 
     /**
@@ -87,11 +87,11 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public static function dataProvider_commit_expectVersion_success(): \Generator
     {
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::ANY()];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::NO_STREAM()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::ANY()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::STREAM_EXISTS()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(2))];
+        yield ['nonexisting-stream', ExpectedVersion::ANY()];
+        yield ['nonexisting-stream', ExpectedVersion::NO_STREAM()];
+        yield ['existing-stream', ExpectedVersion::ANY()];
+        yield ['existing-stream', ExpectedVersion::STREAM_EXISTS()];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(2))];
     }
 
     /**
@@ -274,6 +274,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             self::assertGreaterThan($lastSequenceNumber, $sequenceNumber, sprintf('Expected sequence number of event "%s" to be greater than the previous one (%d) but it is %d', $eventEnvelope->event->id->value, $lastSequenceNumber, $sequenceNumber));
             $payload = json_decode($eventEnvelope->event->data->value, true, 512, JSON_THROW_ON_ERROR);
             self::assertIsArray($payload);
+            self::assertIsInt($payload['expectedVersion'] ?? null);
             if (!isset($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value])) {
                 self::assertSame(ExpectedVersion::NO_STREAM()->value, $payload['expectedVersion'], sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $payload['expectedVersion'], ExpectedVersion::NO_STREAM()->value));
                 self::assertSame(Version::first()->value, $eventEnvelope->version->value, sprintf('Event "%s" is the first in stream "%s" but it has a version of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $eventEnvelope->version->value, Version::first()->value));
@@ -346,9 +347,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitEvents(array_map(static fn ($char) => ['data' => $char, 'type' => $typeClosure($char)], range('d', 'f')), 'second-stream');
     }
 
-    // --- Internal -----
-
-    private function getEventStore(): EventStoreInterface
+    final protected function getEventStore(): EventStoreInterface
     {
         if ($this->eventStore === null) {
             $this->eventStore = static::createEventStore();
@@ -391,7 +390,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
      * @param array{id?: string, type?: string, data?: string, metadata?: array<mixed>, causationId?: string|null, correlationId?: string|null} $event
      * @return Event
      */
-    private function convertEvent(array $event): Event
+    final protected function convertEvent(array $event): Event
     {
         return new Event(
             isset($event['id']) ? EventId::fromString($event['id']) : EventId::create(),
@@ -403,7 +402,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
         );
     }
 
-    public function getStreamVersion(StreamName $streamName): MaybeVersion
+    final protected function getStreamVersion(StreamName $streamName): MaybeVersion
     {
         $lastEventEnvelope = null;
         foreach (static::createEventStore()->load($streamName)->backwards() as $eventEnvelope) {
