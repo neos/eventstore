@@ -3,6 +3,9 @@ declare(strict_types=1);
 namespace Neos\EventStore\Helper;
 
 use Neos\EventStore\EventStoreInterface;
+use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Commit;
+use Neos\EventStore\Model\CommitList;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
@@ -68,34 +71,58 @@ final class InMemoryEventStore implements EventStoreInterface
         if ($events instanceof Event) {
             $events = Events::fromArray([$events]);
         }
-        $maybeVersion = $this->getStreamVersion($streamName);
-        $expectedVersion->verifyVersion($maybeVersion);
-        $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
-        $now = new \DateTimeImmutable();
-        $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
-        $lastCommittedVersion = $version;
-        foreach ($events as $event) {
-            $this->sequenceNumber = $this->sequenceNumber->next();
-            $this->streamVersions[$streamName->value] = $version;
-            $this->events[] = new EventEnvelope(
-                new Event(
-                    $event->id,
-                    $event->type,
-                    $event->data,
-                    $event->metadata,
-                    $event->causationId,
-                    $event->correlationId,
-                ),
-                $streamName,
-                $version,
-                $this->sequenceNumber,
-                $now
-            );
-            $lastCommittedVersion = $version;
-            $version = $version->next();
+        $this->commitAll(CommitList::create(new Commit(
+            streamName: $streamName,
+            events: $events,
+            expectedVersion: $expectedVersion,
+        )));
+        return new CommitResult($this->streamVersions[$streamName->value], $this->sequenceNumber);
+    }
+
+    public function commitAll(CommitList $commits): void
+    {
+        // validation
+        $newStreamVersions = [];
+        foreach ($commits as $index => $commit) {
+            $maybeVersion = MaybeVersion::fromVersionOrNull($newStreamVersions[$commit->streamName->value] ?? $this->streamVersions[$commit->streamName->value] ?? null);
+            if (!$commit->expectedVersion->isSatisfiedBy($maybeVersion)) {
+                if ($commits->count() === 1) {
+                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($commit->expectedVersion, $maybeVersion, $commit->streamName);
+                } else {
+                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpectedCommitAll($commit->expectedVersion, $maybeVersion, $commit->streamName, $index + 1, $commits->count());
+                }
+            }
+            $previousVersion = $maybeVersion->nextVersionOrFirst();
+            $nextVersion = $previousVersion->add(Version::fromInteger($commit->events->count()));
+            $newStreamVersions[$commit->streamName->value] = $nextVersion;
         }
 
-        return new CommitResult($lastCommittedVersion, $this->sequenceNumber);
+        // commiting
+        foreach ($commits as $commit) {
+            $maybeVersion = $this->getStreamVersion($commit->streamName);
+            $version = $maybeVersion->nextVersionOrFirst();
+            $now = new \DateTimeImmutable();
+            $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
+            foreach ($commit->events as $event) {
+                $this->sequenceNumber = $this->sequenceNumber->next();
+                $this->streamVersions[$commit->streamName->value] = $version;
+                $this->events[] = new EventEnvelope(
+                    new Event(
+                        $event->id,
+                        $event->type,
+                        $event->data,
+                        $event->metadata,
+                        $event->causationId,
+                        $event->correlationId,
+                    ),
+                    $commit->streamName,
+                    $version,
+                    $this->sequenceNumber,
+                    $now
+                );
+                $version = $version->next();
+            }
+        }
     }
 
     public function deleteStream(StreamName $streamName): void

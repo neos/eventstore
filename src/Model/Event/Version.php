@@ -30,4 +30,9 @@ final class Version
     {
         return new self($this->value + 1);
     }
+
+    public function add(self $other): self
+    {
+        return new self($this->value + $other->value);
+    }
 }

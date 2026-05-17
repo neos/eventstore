@@ -20,9 +20,19 @@ final class MaybeVersion
         return new self($version);
     }
 
+    /**
+     * @template T
+     * @param T $fallback
+     * @return T|Version
+     */
     public function versionOr(mixed $fallback): mixed
     {
         return $this->version ?? $fallback;
+    }
+
+    public function nextVersionOrFirst(): Version
+    {
+        return $this->version === null ? Version::first() : $this->version->next();
     }
 
     public function isNothing(): bool
