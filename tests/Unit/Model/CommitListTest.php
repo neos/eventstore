@@ -17,11 +17,17 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(CommitList::class)]
 class CommitListTest extends TestCase
 {
-    public function test_illegal_list_same_stream(): void
+    public function test_illegal_empty_list(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(\TypeError::class);
 
-        CommitList::create(
+        /** @phpstan-ignore-next-line */
+        CommitList::create();
+    }
+
+    public function test_list_same_stream_twice(): void
+    {
+        $commits = CommitList::create(
             new Commit(
                 StreamName::fromString('stream-1'),
                 Events::with(new Event(
@@ -50,13 +56,13 @@ class CommitListTest extends TestCase
                 ExpectedVersion::STREAM_EXISTS()
             ),
         );
-    }
 
-    public function test_illegal_empty_list(): void
-    {
-        $this->expectException(\TypeError::class);
-
-        /** @phpstan-ignore-next-line */
-        CommitList::create();
+        self::assertSame(
+            ['stream-1', 'stream-2', 'stream-1'],
+            array_map(
+                fn (Commit $commit) => $commit->streamName->value,
+                iterator_to_array($commits)
+            )
+        );
     }
 }
