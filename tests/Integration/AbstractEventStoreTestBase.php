@@ -66,12 +66,12 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public static function dataProvider_commit_expectVersion_concurrencyException(): \Generator
     {
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::STREAM_EXISTS()];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::fromVersion(Version::first())];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::NO_STREAM()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::first())];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
+        yield ['nonexisting-stream', ExpectedVersion::STREAM_EXISTS()];
+        yield ['nonexisting-stream', ExpectedVersion::fromVersion(Version::first())];
+        yield ['nonexisting-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
+        yield ['existing-stream', ExpectedVersion::NO_STREAM()];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::first())];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(123))];
     }
 
     /**
@@ -87,11 +87,11 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public static function dataProvider_commit_expectVersion_success(): \Generator
     {
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::ANY()];
-        yield ['streamName' => 'nonexisting-stream', ExpectedVersion::NO_STREAM()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::ANY()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::STREAM_EXISTS()];
-        yield ['streamName' => 'existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(2))];
+        yield ['nonexisting-stream', ExpectedVersion::ANY()];
+        yield ['nonexisting-stream', ExpectedVersion::NO_STREAM()];
+        yield ['existing-stream', ExpectedVersion::ANY()];
+        yield ['existing-stream', ExpectedVersion::STREAM_EXISTS()];
+        yield ['existing-stream', ExpectedVersion::fromVersion(Version::fromInteger(2))];
     }
 
     /**
