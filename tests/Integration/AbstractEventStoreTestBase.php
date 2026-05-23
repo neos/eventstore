@@ -256,8 +256,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
         $this->commitEvent(['data' => 'b']);
 
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
-            ['sequenceNumber' => 1, 'recordedAt' => $firstDate],
-            ['sequenceNumber' => 2, 'recordedAt' => $secondDate],
+            ['sequenceNumber' => 1, 'recordedAt' => '2024-09-22T12:00:00+00:00'],
+            ['sequenceNumber' => 2, 'recordedAt' => '2024-09-23T13:00:00+00:00'],
         ]);
 
         date_default_timezone_set($defaultSystemTimezone);
@@ -279,17 +279,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
         EventStoreFakeClock::setNow($secondDateJst);
         $this->commitEvent(['data' => 'b']);
 
-        $firstDateUtc = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
-            '2024-09-22T12:00:00+00:00'
-        );
-        $secondDateUtc = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
-            '2024-09-23T13:00:00+00:00'
-        );
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
-            ['sequenceNumber' => 1, 'recordedAt' => $firstDateUtc],
-            ['sequenceNumber' => 2, 'recordedAt' => $secondDateUtc],
+            ['sequenceNumber' => 1, 'recordedAt' => '2024-09-22T12:00:00+00:00'],
+            ['sequenceNumber' => 2, 'recordedAt' => '2024-09-23T13:00:00+00:00'],
         ]);
     }
 
@@ -476,7 +468,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             'streamName' => $eventEnvelope->streamName->value,
             'version' => $eventEnvelope->version->value,
             'sequenceNumber' => $eventEnvelope->sequenceNumber->value,
-            'recordedAt' => $eventEnvelope->recordedAt,
+            'recordedAt' => $eventEnvelope->recordedAt->format(\DateTimeImmutable::ATOM),
         ];
         foreach (array_diff($supportedKeys, $keys) as $unusedKey) {
             unset($actualAsArray[$unusedKey]);

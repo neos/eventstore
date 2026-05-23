@@ -103,7 +103,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
                 $streamName,
                 $version,
                 $this->sequenceNumber,
-                $this->clock->now()
+                $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))
             );
             $lastCommittedVersion = $version;
             $version = $version->next();
