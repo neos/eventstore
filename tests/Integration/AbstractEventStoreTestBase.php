@@ -241,15 +241,14 @@ abstract class AbstractEventStoreTestBase extends TestCase
         // Ensure test also passes on non UTC systems
         date_default_timezone_set('America/El_Salvador');
 
-        $firstDate = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
+        $firstDate = new \DateTimeImmutable(
             '2024-09-22T12:00:00+00:00'
         );
+        self::assertSame($firstDate->getOffset(), 0);
         EventStoreFakeClock::setNow($firstDate);
         $this->commitEvent(['data' => 'a']);
 
-        $secondDate = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
+        $secondDate = new \DateTimeImmutable(
             '2024-09-23T13:00:00+00:00'
         );
         EventStoreFakeClock::setNow($secondDate);
@@ -265,17 +264,17 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public function test_loaded_events_contain_recorded_at_in_utc(): void
     {
-        $firstDateCet = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
+        $firstDateCet = new \DateTimeImmutable(
             '2024-09-22T13:00:00+01:00'
         );
+        self::assertSame($firstDateCet->getOffset(), 60 * 60);
         EventStoreFakeClock::setNow($firstDateCet);
         $this->commitEvent(['data' => 'a']);
 
-        $secondDateJst = \DateTimeImmutable::createFromFormat(
-            \DateTimeImmutable::ATOM,
+        $secondDateJst = new \DateTimeImmutable(
             '2024-09-23T22:00:00+09:00'
         );
+        self::assertSame($secondDateJst->getOffset(), 9 * 60 * 60);
         EventStoreFakeClock::setNow($secondDateJst);
         $this->commitEvent(['data' => 'b']);
 
@@ -417,7 +416,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     /**
      * @param EventStreamInterface $eventStream
-     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
+     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: string}> $expectedEvents
      */
     final protected static function assertEventStream(EventStreamInterface $eventStream, array $expectedEvents): void
     {
@@ -449,7 +448,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     /**
      * @param string[] $keys
      * @param EventEnvelope $eventEnvelope
-     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
+     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: string}
      */
     private static function eventEnvelopeToArray(array $keys, EventEnvelope $eventEnvelope): array
     {
