@@ -32,6 +32,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
 {
     private ?EventStoreInterface $eventStore = null;
 
+    /**
+     * Must use {@see EventStoreFakeClock} for testing.
+     */
     abstract protected static function createEventStore(): EventStoreInterface;
 
     // --- Tests ----
@@ -228,6 +231,65 @@ abstract class AbstractEventStoreTestBase extends TestCase
         self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
             ['sequenceNumber' => 1, 'metadata' => ['foo' => 'bar']],
             ['sequenceNumber' => 2, 'metadata' => ['bar' => 'baz']],
+        ]);
+    }
+
+    public function test_loaded_events_contain_recorded_at(): void
+    {
+        $defaultSystemTimezone = date_default_timezone_get();
+
+        // Ensure test also passes on non UTC systems
+        date_default_timezone_set('America/El_Salvador');
+
+        $firstDate = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-22T12:00:00+00:00'
+        );
+        EventStoreFakeClock::setNow($firstDate);
+        $this->commitEvent(['data' => 'a']);
+
+        $secondDate = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-23T13:00:00+00:00'
+        );
+        EventStoreFakeClock::setNow($secondDate);
+        $this->commitEvent(['data' => 'b']);
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'recordedAt' => $firstDate],
+            ['sequenceNumber' => 2, 'recordedAt' => $secondDate],
+        ]);
+
+        date_default_timezone_set($defaultSystemTimezone);
+    }
+
+    public function test_loaded_events_contain_recorded_at_in_utc(): void
+    {
+        $firstDateCet = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-22T13:00:00+01:00'
+        );
+        EventStoreFakeClock::setNow($firstDateCet);
+        $this->commitEvent(['data' => 'a']);
+
+        $secondDateJst = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-23T22:00:00+09:00'
+        );
+        EventStoreFakeClock::setNow($secondDateJst);
+        $this->commitEvent(['data' => 'b']);
+
+        $firstDateUtc = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-22T12:00:00+00:00'
+        );
+        $secondDateUtc = \DateTimeImmutable::createFromFormat(
+            \DateTimeImmutable::ATOM,
+            '2024-09-23T13:00:00+00:00'
+        );
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'recordedAt' => $firstDateUtc],
+            ['sequenceNumber' => 2, 'recordedAt' => $secondDateUtc],
         ]);
     }
 
