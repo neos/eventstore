@@ -30,7 +30,7 @@ final class StreamName
 
     private static function constant(string $value): self
     {
-        return self::$instances[$value] ?? self::$instances[$value] = new self($value);
+        return self::$instances[$value] ??= new self($value);
     }
 
     public static function fromString(string $value): self

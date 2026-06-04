@@ -9,12 +9,12 @@ use Webmozart\Assert\Assert;
  *
  * @api
  */
-final class EventType
+final readonly class EventType
 {
     public const MAX_LENGTH = 100;
 
     private function __construct(
-        public readonly string $value,
+        public string $value,
     ) {
         Assert::stringNotEmpty($value, 'The event type must not be empty');
         Assert::maxLength($value, self::MAX_LENGTH, 'The event type name must not exceed ' . self::MAX_LENGTH . ' characters');

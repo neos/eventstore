@@ -12,14 +12,14 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
  * @see EventStoreInterface::commit()
  * @api
  */
-final class ExpectedVersion
+final readonly class ExpectedVersion
 {
     private const STREAM_EXISTS = -4;
     private const ANY = -2;
     private const NO_STREAM = -1;
 
     private function __construct(
-        public readonly int $value
+        public int $value
     ) {
     }
 

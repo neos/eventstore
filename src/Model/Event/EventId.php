@@ -10,12 +10,12 @@ use Webmozart\Assert\Assert;
  *
  * @api
  */
-final class EventId
+final readonly class EventId
 {
     public const MAX_LENGTH = 36;
 
     private function __construct(
-        public readonly string $value,
+        public string $value,
     ) {
         Assert::length($value, self::MAX_LENGTH, 'The event id must be exactly ' . self::MAX_LENGTH . ' characters, got %s');
     }

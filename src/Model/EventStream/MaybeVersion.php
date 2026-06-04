@@ -8,10 +8,10 @@ use Neos\EventStore\Model\Event\Version;
  * An [option type](https://en.wikipedia.org/wiki/Option_type) that represents a {@see Version} or nothing
  * @api
  */
-final class MaybeVersion
+final readonly class MaybeVersion
 {
     private function __construct(
-        private readonly ?Version $version
+        private ?Version $version
     ) {
     }
 

@@ -8,10 +8,10 @@ use Webmozart\Assert\Assert;
  * The global sequence number of a persisted event
  * @api
  */
-final class SequenceNumber
+final readonly class SequenceNumber
 {
     private function __construct(
-        public readonly int $value
+        public int $value
     ) {
         Assert::natural($value, 'sequence number has to be a non-negative integer, got: %s');
     }

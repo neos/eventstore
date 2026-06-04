@@ -11,15 +11,14 @@ use Neos\EventStore\Model\Event\SequenceNumber;
  *
  * @internal This helper is mostly useful for testing purposes and should not be used in production
  */
-final class ClosureEventStream implements EventStreamInterface
+final readonly class ClosureEventStream implements EventStreamInterface
 {
-
     private function __construct(
-        private readonly \Closure $closure,
-        private readonly ?SequenceNumber $minimumSequenceNumber,
-        private readonly ?SequenceNumber $maximumSequenceNumber,
-        private readonly ?int $limit,
-        private readonly bool $backwards,
+        private \Closure $closure,
+        private ?SequenceNumber $minimumSequenceNumber,
+        private ?SequenceNumber $maximumSequenceNumber,
+        private ?int $limit,
+        private bool $backwards,
     ) {
     }
 

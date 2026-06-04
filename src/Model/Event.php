@@ -13,15 +13,15 @@ use Neos\EventStore\Model\Event\EventType;
  * Main model for reading and writing (when reading, it is wrapped in {@see EventEnvelope})
  * @api
  */
-final class Event
+final readonly class Event
 {
     public function __construct(
-        public readonly EventId $id,
-        public readonly EventType $type,
-        public readonly EventData $data,
-        public readonly ?EventMetadata $metadata = null,
-        public readonly ?CausationId $causationId = null,
-        public readonly ?CorrelationId $correlationId = null,
+        public EventId $id,
+        public EventType $type,
+        public EventData $data,
+        public ?EventMetadata $metadata = null,
+        public ?CausationId $causationId = null,
+        public ?CorrelationId $correlationId = null,
     ) {
     }
 }

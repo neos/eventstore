@@ -11,18 +11,17 @@ use Neos\EventStore\Model\Event\SequenceNumber;
  *
  * @internal This helper is mostly useful for testing purposes and should not be used in production
  */
-final class InMemoryEventStream implements EventStreamInterface
+final readonly class InMemoryEventStream implements EventStreamInterface
 {
-
     /**
      * @param EventEnvelope[] $events
      */
     private function __construct(
-        private readonly array $events,
-        private readonly ?SequenceNumber $minimumSequenceNumber,
-        private readonly ?SequenceNumber $maximumSequenceNumber,
-        private readonly ?int $limit,
-        private readonly bool $backwards,
+        private array $events,
+        private ?SequenceNumber $minimumSequenceNumber,
+        private ?SequenceNumber $maximumSequenceNumber,
+        private ?int $limit,
+        private bool $backwards,
     ) {
     }
 
