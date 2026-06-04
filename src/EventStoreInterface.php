@@ -7,6 +7,7 @@ use Neos\EventStore\Model\CommitList;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\Version;
+use Neos\EventStore\Model\EventStore\CommitAllResult;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
@@ -59,5 +60,5 @@ interface EventStoreInterface
      * @param CommitList $commits
      * @throws ConcurrencyException in case that any of the $expectedVersion check fails. Nothing is commited.
      */
-    public function commitAll(CommitList $commits): void;
+    public function commitAll(CommitList $commits): CommitAllResult;
 }
