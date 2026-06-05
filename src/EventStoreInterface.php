@@ -51,12 +51,4 @@ interface EventStoreInterface
      * @throws ConcurrencyException in case that the $expectedVersion check fails
      */
     public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult;
-
-    /**
-     * Permanently remove all events from the specified stream
-     * Note: Not all implementations might support this!
-     *
-     * @param StreamName $streamName Name of the stream to prune
-     */
-    public function deleteStream(StreamName $streamName): void;
 }
