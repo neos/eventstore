@@ -286,7 +286,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             }
             $lastSequenceNumber = $sequenceNumber;
         }
-        self::assertGreaterThan(0, $lastSequenceNumber);
+        self::assertGreaterThan(0, $lastSequenceNumber, 'No events were verified');
     }
 
 
