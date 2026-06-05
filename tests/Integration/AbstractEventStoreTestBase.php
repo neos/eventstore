@@ -294,6 +294,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     public static function consistency_validateEvents(): void
     {
+        /** HOTFIX to use PHP unit assertions https://github.com/Behat/Behat/issues/1618 */
+        (new \PHPUnit\TextUI\Configuration\Builder())->build([]);
+
         /** @var array<string, EventEnvelope[]> $processedEventEnvelopesByStreamName */
         $processedEventEnvelopesByStreamName = [];
         $lastSequenceNumber = 0;
