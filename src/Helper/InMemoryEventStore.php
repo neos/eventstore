@@ -39,17 +39,9 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
 
     private ?SequenceNumber $sequenceNumber = null;
 
-    private readonly ClockInterface $clock;
-
     public function __construct(
-        ?ClockInterface $clock = null
+        private readonly ClockInterface $clock
     ) {
-        $this->clock = $clock ?? new class implements ClockInterface {
-            public function now(): \DateTimeImmutable
-            {
-                return new \DateTimeImmutable();
-            }
-        };
     }
 
     public function setup(): void
