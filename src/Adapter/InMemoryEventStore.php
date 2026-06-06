@@ -16,6 +16,7 @@ use Neos\EventStore\Model\EventStore\CommitAllResult;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
 use Neos\EventStore\Model\EventStore\VersionForStream;
+use Neos\EventStore\Model\EventStore\VersionForStreams;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
@@ -77,15 +78,11 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
 
     public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult
     {
-        if ($events instanceof Event) {
-            $events = Events::fromArray([$events]);
-        }
-        $this->commitAll(CommitList::create(new Commit(
+        return $this->commitAll(CommitList::createForEventsForStream(
             streamName: $streamName,
             events: $events,
             expectedVersion: $expectedVersion,
-        )));
-        return new CommitResult($this->streamVersions[$streamName->value], $this->sequenceNumber);
+        ))->first();
     }
 
     public function commitAll(CommitList $commits): CommitAllResult
@@ -111,7 +108,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
         foreach ($commits as $commit) {
             $maybeVersion = $this->getStreamVersion($commit->streamName);
             $version = $maybeVersion->nextVersionOrFirst();
-            $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
+            $this->sequenceNumber ??= SequenceNumber::none();
             foreach ($commit->events as $event) {
                 $this->sequenceNumber = $this->sequenceNumber->next();
                 $this->streamVersions[$commit->streamName->value] = $version;
@@ -134,7 +131,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
             }
         }
 
-        return CommitAllResult::create($this->sequenceNumber, ...$newStreamVersions);
+        return CommitAllResult::create($this->sequenceNumber, VersionForStreams::create(...$newStreamVersions));
     }
 
     public function deleteStream(StreamName $streamName): void

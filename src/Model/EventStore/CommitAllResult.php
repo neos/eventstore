@@ -10,16 +10,23 @@ use Neos\EventStore\Model\Event\Version;
  */
 final class CommitAllResult
 {
-    /**
-     * @param array<VersionForStream> $versionForStream
-     */
     private function __construct(
         public readonly SequenceNumber $highestCommittedSequenceNumber,
-        public readonly array $versionsForStream
-    ) {}
+        public readonly VersionForStreams $versionForStreams
+    ) {
+    }
 
-    public static function create(SequenceNumber $highestCommittedSequenceNumber, VersionForStream ...$versionsForStream): self
+    public static function create(SequenceNumber $highestCommittedSequenceNumber, VersionForStreams $versionForStreams): self
     {
-        return new self($highestCommittedSequenceNumber, $versionsForStream);
+        return new self($highestCommittedSequenceNumber, $versionForStreams);
+    }
+
+    /** @internal */
+    public function first(): CommitResult
+    {
+        return new CommitResult(
+            highestCommittedVersion: $this->versionForStreams->items[0]->version,
+            highestCommittedSequenceNumber: $this->highestCommittedSequenceNumber,
+        );
     }
 }
