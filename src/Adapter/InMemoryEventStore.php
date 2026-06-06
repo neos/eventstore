@@ -1,29 +1,29 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Helper;
+namespace Neos\EventStore\Adapter;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Model\Event;
+use Neos\EventStore\Model\Event\SequenceNumber;
+use Neos\EventStore\Model\Event\StreamName;
+use Neos\EventStore\Model\Event\Version;
+use Neos\EventStore\Model\EventEnvelope;
+use Neos\EventStore\Model\Events;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
-use Neos\EventStore\Model\EventEnvelope;
-use Neos\EventStore\Model\Event\SequenceNumber;
-use Neos\EventStore\Model\Event\StreamName;
-use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
-use Neos\EventStore\Model\Events;
-use Psr\Clock\ClockInterface;
 use Neos\EventStore\WithResetInterface;
+use Psr\Clock\ClockInterface;
 
 /**
- * In-memorry implementation of an event store
+ * In-memory implementation of an event store
  *
- * @internal This helper is mostly useful for testing purposes and should not be used in production
+ * @internal exposed for testing and experimental use cases. Memory footprint and performance with large data untested.
  */
 final class InMemoryEventStore implements EventStoreInterface, WithResetInterface
 {
