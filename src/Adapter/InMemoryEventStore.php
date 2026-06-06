@@ -12,8 +12,10 @@ use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventEnvelope;
 use Neos\EventStore\Model\Events;
+use Neos\EventStore\Model\EventStore\CommitAllResult;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
+use Neos\EventStore\Model\EventStore\VersionForStream;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
@@ -86,7 +88,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
         return new CommitResult($this->streamVersions[$streamName->value], $this->sequenceNumber);
     }
 
-    public function commitAll(CommitList $commits): void
+    public function commitAll(CommitList $commits): CommitAllResult
     {
         // validation
         $newStreamVersions = [];
@@ -105,6 +107,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
         }
 
         // commiting
+        $newStreamVersions = [];
         foreach ($commits as $commit) {
             $maybeVersion = $this->getStreamVersion($commit->streamName);
             $version = $maybeVersion->nextVersionOrFirst();
@@ -127,8 +130,11 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
                     $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))
                 );
                 $version = $version->next();
+                $newStreamVersions[$commit->streamName->value] = new VersionForStream($commit->streamName, $version);
             }
         }
+
+        return CommitAllResult::create($this->sequenceNumber, ...$newStreamVersions);
     }
 
     public function deleteStream(StreamName $streamName): void
