@@ -307,7 +307,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
             self::assertIsArray($payload);
             self::assertIsInt($payload['expectedVersion'] ?? null);
             if (!isset($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value])) {
-                self::assertSame(ExpectedVersion::NO_STREAM()->value, $payload['expectedVersion'], sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $payload['expectedVersion'], ExpectedVersion::NO_STREAM()->value));
+                $expectedVersion = $payload['expectedVersion'] ?? null;
+                self::assertSame(ExpectedVersion::NO_STREAM()->value, $expectedVersion, sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $expectedVersion, ExpectedVersion::NO_STREAM()->value));
                 self::assertSame(Version::first()->value, $eventEnvelope->version->value, sprintf('Event "%s" is the first in stream "%s" but it has a version of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $eventEnvelope->version->value, Version::first()->value));
                 $processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value] = [$eventEnvelope];
             } else {
