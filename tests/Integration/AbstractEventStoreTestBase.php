@@ -32,6 +32,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
 {
     private ?EventStoreInterface $eventStore = null;
 
+    /**
+     * Must use {@see EventStoreFakeClock} for testing.
+     */
     abstract protected static function createEventStore(): EventStoreInterface;
 
     // --- Tests ----
@@ -231,6 +234,56 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
+    public function test_loaded_events_contain_recorded_at(): void
+    {
+        $defaultSystemTimezone = date_default_timezone_get();
+
+        // Ensure test also passes on non UTC systems
+        date_default_timezone_set('America/El_Salvador');
+
+        $firstDate = new \DateTimeImmutable(
+            '2024-09-22T12:00:00+00:00'
+        );
+        self::assertSame($firstDate->getOffset(), 0);
+        EventStoreFakeClock::setNow($firstDate);
+        $this->commitEvent(['data' => 'a']);
+
+        $secondDate = new \DateTimeImmutable(
+            '2024-09-23T13:00:00+00:00'
+        );
+        EventStoreFakeClock::setNow($secondDate);
+        $this->commitEvent(['data' => 'b']);
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'recordedAt' => '2024-09-22T12:00:00+00:00'],
+            ['sequenceNumber' => 2, 'recordedAt' => '2024-09-23T13:00:00+00:00'],
+        ]);
+
+        date_default_timezone_set($defaultSystemTimezone);
+    }
+
+    public function test_loaded_events_contain_recorded_at_in_utc(): void
+    {
+        $firstDateCet = new \DateTimeImmutable(
+            '2024-09-22T13:00:00+01:00'
+        );
+        self::assertSame($firstDateCet->getOffset(), 60 * 60);
+        EventStoreFakeClock::setNow($firstDateCet);
+        $this->commitEvent(['data' => 'a']);
+
+        $secondDateJst = new \DateTimeImmutable(
+            '2024-09-23T22:00:00+09:00'
+        );
+        self::assertSame($secondDateJst->getOffset(), 9 * 60 * 60);
+        EventStoreFakeClock::setNow($secondDateJst);
+        $this->commitEvent(['data' => 'b']);
+
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['sequenceNumber' => 1, 'recordedAt' => '2024-09-22T12:00:00+00:00'],
+            ['sequenceNumber' => 2, 'recordedAt' => '2024-09-23T13:00:00+00:00'],
+        ]);
+    }
+
     public function test_loaded_events_contain_causation_and_correlation_ids(): void
     {
         $this->commitEvent(['causationId' => 'some-causation-id']);
@@ -363,7 +416,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
 
     /**
      * @param EventStreamInterface $eventStream
-     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}> $expectedEvents
+     * @param array<array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: string}> $expectedEvents
      */
     final protected static function assertEventStream(EventStreamInterface $eventStream, array $expectedEvents): void
     {
@@ -395,7 +448,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
     /**
      * @param string[] $keys
      * @param EventEnvelope $eventEnvelope
-     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: \DateTimeInterface}
+     * @return array{id?: string, type?: string, data?: string, metadata?: array<mixed>|null, causationId?: string|null, correlationId?: string|null, streamName?: string, version?: int, sequenceNumber?: int, recordedAt?: string}
      */
     private static function eventEnvelopeToArray(array $keys, EventEnvelope $eventEnvelope): array
     {
@@ -414,7 +467,7 @@ abstract class AbstractEventStoreTestBase extends TestCase
             'streamName' => $eventEnvelope->streamName->value,
             'version' => $eventEnvelope->version->value,
             'sequenceNumber' => $eventEnvelope->sequenceNumber->value,
-            'recordedAt' => $eventEnvelope->recordedAt,
+            'recordedAt' => $eventEnvelope->recordedAt->format(\DateTimeImmutable::ATOM),
         ];
         foreach (array_diff($supportedKeys, $keys) as $unusedKey) {
             unset($actualAsArray[$unusedKey]);

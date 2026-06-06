@@ -17,6 +17,7 @@ use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamType;
 use Neos\EventStore\Model\Events;
+use Psr\Clock\ClockInterface;
 use Neos\EventStore\WithResetInterface;
 
 /**
@@ -37,6 +38,19 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
     private array $streamVersions = [];
 
     private ?SequenceNumber $sequenceNumber = null;
+
+    private readonly ClockInterface $clock;
+
+    public function __construct(
+        ?ClockInterface $clock = null
+    ) {
+        $this->clock = $clock ?? new class implements ClockInterface {
+            public function now(): \DateTimeImmutable
+            {
+                return new \DateTimeImmutable();
+            }
+        };
+    }
 
     public function setup(): void
     {
@@ -72,7 +86,6 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
         $maybeVersion = $this->getStreamVersion($streamName);
         $expectedVersion->verifyVersion($maybeVersion);
         $version = $maybeVersion->isNothing() ? Version::first() : $maybeVersion->unwrap()->next();
-        $now = new \DateTimeImmutable();
         $this->sequenceNumber = $this->sequenceNumber ?? SequenceNumber::none();
         $lastCommittedVersion = $version;
         foreach ($events as $event) {
@@ -90,7 +103,7 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
                 $streamName,
                 $version,
                 $this->sequenceNumber,
-                $now
+                $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))
             );
             $lastCommittedVersion = $version;
             $version = $version->next();
