@@ -10,13 +10,18 @@ final readonly class VersionForStreams implements \IteratorAggregate, \Countable
 {
     /** @param non-empty-list<VersionForStream> $items */
     private function __construct(
-        public array $items
+        private array $items
     ) {
     }
 
     public static function create(VersionForStream $first, VersionForStream ...$items): self
     {
         return new self([$first, ...array_values($items)]);
+    }
+
+    public function first(): VersionForStream
+    {
+        return $this->items[0];
     }
 
     public function getIterator(): \Traversable

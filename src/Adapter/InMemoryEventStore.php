@@ -77,11 +77,11 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
 
     public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult
     {
-        return $this->commitAll(EventsForCommit::createEventsForStreamAndExpectedVersion(
+        return CommitResult::fromCommitAll($this->commitAll(EventsForCommit::createEventsForStreamAndExpectedVersion(
             streamName: $streamName,
             events: $events,
             expectedVersion: $expectedVersion,
-        ))->first();
+        )));
     }
 
     public function commitAll(EventsForCommit $commit): CommitAllResult
