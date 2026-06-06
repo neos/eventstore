@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\Tests\Unit\Helper;
 
 use Neos\EventStore\Helper\BatchEventStream;
-use Neos\EventStore\Helper\InMemoryEventStream;
+use Neos\EventStore\Adapter\InMemoryEventStream;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;

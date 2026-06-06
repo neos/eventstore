@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\Tests\Unit\Helper;
 
 use Neos\EventStore\EventStoreInterface;
-use Neos\EventStore\Helper\InMemoryEventStore;
+use Neos\EventStore\Adapter\InMemoryEventStore;
 use Neos\EventStore\Tests\Integration\AbstractEventStoreTestBase;
 use Neos\EventStore\Tests\Integration\EventStoreFakeClock;
 use PHPUnit\Framework\Attributes\CoversClass;

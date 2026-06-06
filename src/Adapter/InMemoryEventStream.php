@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace Neos\EventStore\Helper;
+namespace Neos\EventStore\Adapter;
 
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventEnvelope;
@@ -9,7 +9,7 @@ use Neos\EventStore\Model\Event\SequenceNumber;
 /**
  * In-memory implementation of an event stream
  *
- * @internal This helper is mostly useful for testing purposes and should not be used in production
+ * @internal exposed for testing and experimental use cases. Memory footprint and performance with large data untested.
  */
 final readonly class InMemoryEventStream implements EventStreamInterface
 {
