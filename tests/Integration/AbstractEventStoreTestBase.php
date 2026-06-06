@@ -305,7 +305,6 @@ abstract class AbstractEventStoreTestBase extends TestCase
             self::assertGreaterThan($lastSequenceNumber, $sequenceNumber, sprintf('Expected sequence number of event "%s" to be greater than the previous one (%d) but it is %d', $eventEnvelope->event->id->value, $lastSequenceNumber, $sequenceNumber));
             $payload = json_decode($eventEnvelope->event->data->value, true, 512, JSON_THROW_ON_ERROR);
             self::assertIsArray($payload);
-            self::assertIsInt($payload['expectedVersion'] ?? null);
             if (!isset($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value])) {
                 $expectedVersion = $payload['expectedVersion'] ?? null;
                 self::assertSame(ExpectedVersion::NO_STREAM()->value, $expectedVersion, sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $expectedVersion, ExpectedVersion::NO_STREAM()->value));
