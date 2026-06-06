@@ -5,6 +5,7 @@ namespace Neos\EventStore\Exception;
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
+use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
@@ -13,25 +14,14 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
  */
 final class ConcurrencyException extends \RuntimeException
 {
-    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedVersion $expectedVersion, MaybeVersion $actualVersion, StreamName $streamName): self
+    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedVersion $expectedVersion, MaybeVersion $actualVersion, StreamName $streamName, ExpectedVersionForStreams $expectedVersionForStreams): self
     {
         return new self(sprintf(
-            'Expected version: %s for stream "%s", actual version: %s',
-            $expectedVersion->__toString(),
-            $streamName->value,
-            $actualVersion->__toString()
-        ), 1779022349);
-    }
-
-    public static function becauseVersionOfStreamDoesNotMatchExpectedCommitAll(ExpectedVersion $expectedVersion, MaybeVersion $actualVersion, StreamName $streamName, int $commitCycle, int $commitsCount): self
-    {
-        return new self(sprintf(
-            'Expected version: %s for stream "%s", actual version: %s while commiting %d of %d',
+            'Expected version: %s for stream "%s", actual version: %s.%s',
             $expectedVersion->__toString(),
             $streamName->value,
             $actualVersion->__toString(),
-            $commitCycle,
-            $commitsCount,
-        ), 1779023703);
+            $expectedVersionForStreams->count() > 1 ? ' All: ' . $expectedVersionForStreams->toDebugString() : ''
+        ), 1779022349);
     }
 }

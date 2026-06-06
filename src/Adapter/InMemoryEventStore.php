@@ -4,8 +4,7 @@ namespace Neos\EventStore\Adapter;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Exception\ConcurrencyException;
-use Neos\EventStore\Model\Commit;
-use Neos\EventStore\Model\CommitList;
+use Neos\EventStore\Model\EventsForCommit;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\StreamName;
@@ -78,40 +77,32 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
 
     public function commit(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): CommitResult
     {
-        return $this->commitAll(CommitList::createForEventsForStream(
+        return $this->commitAll(EventsForCommit::createEventsForStreamAndExpectedVersion(
             streamName: $streamName,
             events: $events,
             expectedVersion: $expectedVersion,
         ))->first();
     }
 
-    public function commitAll(CommitList $commits): CommitAllResult
+    public function commitAll(EventsForCommit $commit): CommitAllResult
     {
         // validation
-        $newStreamVersions = [];
-        foreach ($commits as $index => $commit) {
-            $maybeVersion = MaybeVersion::fromVersionOrNull($newStreamVersions[$commit->streamName->value] ?? $this->streamVersions[$commit->streamName->value] ?? null);
-            if (!$commit->expectedVersion->isSatisfiedBy($maybeVersion)) {
-                if ($commits->count() === 1) {
-                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($commit->expectedVersion, $maybeVersion, $commit->streamName);
-                } else {
-                    throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpectedCommitAll($commit->expectedVersion, $maybeVersion, $commit->streamName, $index + 1, $commits->count());
-                }
+        foreach ($commit->expectedVersionForStreams as $expectedVersionForStream) {
+            $maybeVersion = MaybeVersion::fromVersionOrNull($this->streamVersions[$expectedVersionForStream->streamName->value] ?? null);
+            if (!$expectedVersionForStream->expectedVersion->isSatisfiedBy($maybeVersion)) {
+                throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($expectedVersionForStream->expectedVersion, $maybeVersion, $expectedVersionForStream->streamName, $commit->expectedVersionForStreams);
             }
-            $previousVersion = $maybeVersion->nextVersionOrFirst();
-            $nextVersion = $previousVersion->add(Version::fromInteger($commit->events->count()));
-            $newStreamVersions[$commit->streamName->value] = $nextVersion;
         }
 
         // commiting
         $newStreamVersions = [];
-        foreach ($commits as $commit) {
-            $maybeVersion = $this->getStreamVersion($commit->streamName);
+        foreach ($commit->eventsForStreams as $eventsForStream) {
+            $maybeVersion = $this->getStreamVersion($eventsForStream->streamName);
             $version = $maybeVersion->nextVersionOrFirst();
             $this->sequenceNumber ??= SequenceNumber::none();
-            foreach ($commit->events as $event) {
+            foreach ($eventsForStream->events as $event) {
                 $this->sequenceNumber = $this->sequenceNumber->next();
-                $this->streamVersions[$commit->streamName->value] = $version;
+                $this->streamVersions[$eventsForStream->streamName->value] = $version;
                 $this->events[] = new EventEnvelope(
                     new Event(
                         $event->id,
@@ -121,17 +112,18 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
                         $event->causationId,
                         $event->correlationId,
                     ),
-                    $commit->streamName,
+                    $eventsForStream->streamName,
                     $version,
                     $this->sequenceNumber,
                     $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))
                 );
+                $newStreamVersions[$eventsForStream->streamName->value] = VersionForStream::create($eventsForStream->streamName, $version);
                 $version = $version->next();
-                $newStreamVersions[$commit->streamName->value] = new VersionForStream($commit->streamName, $version);
             }
         }
-
-        return CommitAllResult::create($this->sequenceNumber, VersionForStreams::create(...$newStreamVersions));
+        // Always set, as at least one iteration
+        assert($this->sequenceNumber !== null);
+        return CommitAllResult::create($this->sequenceNumber, VersionForStreams::create(...array_values($newStreamVersions)));
     }
 
     public function deleteStream(StreamName $streamName): void

@@ -1,24 +1,25 @@
 <?php
-namespace Neos\EventStore\Model\EventStore;
+declare(strict_types=1);
+
+namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\Model\Event\StreamName;
-use Neos\EventStore\Model\Event\Version;
 
-final readonly class VersionForStream
+final readonly class ExpectedVersionForStream
 {
     private function __construct(
         public StreamName $streamName,
-        public Version $version
+        public ExpectedVersion $expectedVersion
     ) {
     }
 
     public static function create(
         StreamName $streamName,
-        Version $version,
+        ExpectedVersion $expectedVersion,
     ): self {
         return new self(
             streamName: $streamName,
-            version: $version,
+            expectedVersion: $expectedVersion,
         );
     }
 }

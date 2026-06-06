@@ -3,19 +3,19 @@ declare(strict_types=1);
 namespace Neos\EventStore;
 
 use Neos\EventStore\Exception\ConcurrencyException;
-use Neos\EventStore\Model\CommitList;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\SequenceNumber;
+use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
+use Neos\EventStore\Model\Events;
+use Neos\EventStore\Model\EventsForCommit;
 use Neos\EventStore\Model\EventStore\CommitAllResult;
 use Neos\EventStore\Model\EventStore\CommitResult;
 use Neos\EventStore\Model\EventStore\Status;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
-use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
-use Neos\EventStore\Model\Events;
 
 /**
  * Common interface for an event store backend
@@ -57,8 +57,8 @@ interface EventStoreInterface
     /**
      * Append one or more events to the specified streams
      *
-     * @param CommitList $commits
-     * @throws ConcurrencyException in case that any of the $expectedVersion check fails. Nothing is commited.
+     * @param EventsForCommit $commit
+     * @throws ConcurrencyException in case that any of the $commit->expectedVersionForStreams check fails. Nothing is commited.
      */
-    public function commitAll(CommitList $commits): CommitAllResult;
+    public function commitAll(EventsForCommit $commit): CommitAllResult;
 }
