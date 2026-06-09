@@ -48,7 +48,7 @@ final readonly class MaybeVersion
         return $this->version;
     }
 
-    public function __toString(): string
+    public function toDebugString(): string
     {
         return $this->version === null ? '[none]' : (string)$this->version->value;
     }

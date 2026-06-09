@@ -63,7 +63,7 @@ final readonly class ExpectedVersion
         };
     }
 
-    public function __toString(): string
+    public function toDebugString(): string
     {
         return match ($this->value) {
             self::STREAM_EXISTS => '-4 [stream exists]',

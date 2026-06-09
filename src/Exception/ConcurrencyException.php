@@ -21,7 +21,7 @@ final class ConcurrencyException extends \RuntimeException
         return new self(sprintf(
             'Expected version: %s, actual version: %s.%s',
             $expectedVersionForStream->toDebugString(),
-            $actualVersion->__toString(),
+            $actualVersion->toDebugString(),
             $expectedVersionForStreams->count() > 1 ? ' All: ' . $expectedVersionForStreams->toDebugString() : ''
         ), 1779022349);
     }
