@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Neos\EventStore\Model\EventStream;
 
+use Neos\EventStore\Exception\DuplicateVersionConstraintException;
 use Neos\EventStore\Model\Event\StreamName;
 
 /**
@@ -21,7 +22,7 @@ final readonly class ExpectedVersionForStreams implements \IteratorAggregate, \C
         $indexed = [];
         foreach ($items as $item) {
             if (array_key_exists($item->streamName->value, $indexed)) {
-                throw new \InvalidArgumentException(sprintf('Duplicate constraint %s and %s', $item->toDebugString(), $indexed[$item->streamName->value]->toDebugString()), 1780750216);
+                throw DuplicateVersionConstraintException::becauseExpectedStreamVersionIsDuplicate($indexed[$item->streamName->value], $item);
             }
             $indexed[$item->streamName->value] = $item;
         }
@@ -32,7 +33,7 @@ final readonly class ExpectedVersionForStreams implements \IteratorAggregate, \C
     public function withAppended(ExpectedVersionForStream|ExpectedNoStream|ExpectedStreamExists $item): self
     {
         if (array_key_exists($item->streamName->value, $this->items)) {
-            throw new \InvalidArgumentException(sprintf('Duplicate constraint %s and %s', $item->toDebugString(), $this->items[$item->streamName->value]->toDebugString()), 1780752238);
+            throw DuplicateVersionConstraintException::becauseExpectedStreamVersionIsDuplicate($this->items[$item->streamName->value], $item);
         }
         return new self([...$this->items, ...[$item->streamName->value => $item]]);
     }

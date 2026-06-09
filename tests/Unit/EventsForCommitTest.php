@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Unit;
 
+use Neos\EventStore\Exception\DuplicateVersionConstraintException;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
@@ -285,8 +286,8 @@ class EventsForCommitTest extends TestCase
 
     public function test_append_same_stream_version_twice(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Duplicate constraint [stream-1 equals 1] and [no stream-1]');
+        $this->expectException(DuplicateVersionConstraintException::class);
+        $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [stream-1 equals 1]');
 
         $commit = EventsForCommit::create(
             EventsForStreams::create(

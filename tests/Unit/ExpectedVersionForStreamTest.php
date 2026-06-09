@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Unit;
 
+use Neos\EventStore\Exception\DuplicateVersionConstraintException;
 use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventsForCommit;
@@ -53,8 +54,8 @@ class ExpectedVersionForStreamTest extends TestCase
 
     public function test_list_same_stream_twice_create(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Duplicate constraint [stream-1 equals 20] and [no stream-1');
+        $this->expectException(DuplicateVersionConstraintException::class);
+        $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [stream-1 equals 20]');
 
         ExpectedVersionForStreams::create(
             ExpectedNoStream::create(
