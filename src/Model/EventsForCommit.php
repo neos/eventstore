@@ -58,6 +58,9 @@ final readonly class EventsForCommit
     public function withEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
     {
         $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
+        if ($expectedVersionForStream === null && $this->expectedVersionForStreams->has($streamName)) {
+            throw new \InvalidArgumentException(sprintf('Duplicate constraint %s and %s', $expectedVersion->toDebugString(), $this->expectedVersionForStreams->get($streamName)?->toDebugString()), 1780752238);
+        }
 
         return new self(
             $this->eventsForStreams->withAppended(

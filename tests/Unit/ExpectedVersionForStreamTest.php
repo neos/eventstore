@@ -54,7 +54,7 @@ class ExpectedVersionForStreamTest extends TestCase
     public function test_list_same_stream_twice_create(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Duplicate constraint [stream-1 equals 20]');
+        $this->expectExceptionMessage('Duplicate constraint [stream-1 equals 20] and [no stream-1');
 
         ExpectedVersionForStreams::create(
             ExpectedNoStream::create(
@@ -74,7 +74,7 @@ class ExpectedVersionForStreamTest extends TestCase
     public function test_list_same_stream_twice_append(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Duplicate constraint [no stream-1]');
+        $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [no stream-1]');
 
         $subject = ExpectedVersionForStreams::create(
             ExpectedNoStream::create(
