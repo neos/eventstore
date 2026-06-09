@@ -3,9 +3,8 @@ declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\EventStoreInterface;
-use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
-use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
  * The expected version of a stream when committing new events to it
@@ -54,30 +53,13 @@ final readonly class ExpectedVersion
         return new self($version->value);
     }
 
-    public function equals(self $other): bool
+    public function toExpectedStreamVersion(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedVersionForStream|null
     {
-        return $other->value === $this->value;
-    }
-
-    /**
-     * @throws ConcurrencyException
-     */
-    public function verifyVersion(MaybeVersion $version): void
-    {
-        if (!$this->isSatisfiedBy($version)) {
-            throw new ConcurrencyException(sprintf('Expected version: %s, actual version: %s', $this, $version), 1651153651);
-        }
-    }
-
-    public function isSatisfiedBy(MaybeVersion $version): bool
-    {
-        if ($version->isNothing()) {
-            return in_array($this->value, [self::NO_STREAM, self::ANY], true);
-        }
         return match ($this->value) {
-            self::STREAM_EXISTS, self::ANY => true,
-            self::NO_STREAM => false,
-            default => $this->value === $version->unwrap()->value,
+            self::STREAM_EXISTS => ExpectedStreamExists::create($streamName),
+            self::ANY => null,
+            self::NO_STREAM => ExpectedNoStream::create($streamName),
+            default => ExpectedVersionForStream::create($streamName, Version::fromInteger($this->value))
         };
     }
 

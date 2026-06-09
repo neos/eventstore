@@ -89,8 +89,8 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
         // validation
         foreach ($commit->expectedVersionForStreams as $expectedVersionForStream) {
             $maybeVersion = MaybeVersion::fromVersionOrNull($this->streamVersions[$expectedVersionForStream->streamName->value] ?? null);
-            if (!$expectedVersionForStream->expectedVersion->isSatisfiedBy($maybeVersion)) {
-                throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($expectedVersionForStream->expectedVersion, $maybeVersion, $expectedVersionForStream->streamName, $commit->expectedVersionForStreams);
+            if (!$expectedVersionForStream->isSatisfiedBy($maybeVersion)) {
+                throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpected($expectedVersionForStream, $maybeVersion, $commit->expectedVersionForStreams);
             }
         }
 

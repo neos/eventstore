@@ -11,6 +11,7 @@ use Neos\EventStore\Model\Events;
 use Neos\EventStore\Model\EventsForCommit;
 use Neos\EventStore\Model\EventsForStream;
 use Neos\EventStore\Model\EventsForStreams;
+use Neos\EventStore\Model\EventStream\ExpectedNoStream;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\EventStream\ExpectedVersionForStream;
 use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
@@ -20,14 +21,13 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(EventsForCommit::class)]
 class EventsForCommitTest extends TestCase
 {
-    public function test_illegal_empty_list(): void
+    public function test_illegal_empty_events_list(): void
     {
         $this->expectException(\TypeError::class);
 
         EventsForCommit::create(
             /** @phpstan-ignore-next-line */
             EventsForStreams::create(),
-            /** @phpstan-ignore-next-line */
             ExpectedVersionForStreams::create(),
         );
     }
@@ -54,13 +54,12 @@ class EventsForCommitTest extends TestCase
                 ),
             ),
             ExpectedVersionForStreams::create(
-                ExpectedVersionForStream::create(
+                ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
-                    ExpectedVersion::NO_STREAM(),
                 ),
                 ExpectedVersionForStream::create(
                     StreamName::fromString('stream-2'),
-                    ExpectedVersion::fromVersion(Event\Version::fromInteger(20))
+                    Event\Version::fromInteger(20)
                 )
             ),
         );
@@ -119,13 +118,11 @@ class EventsForCommitTest extends TestCase
                 ),
             ),
             ExpectedVersionForStreams::create(
-                ExpectedVersionForStream::create(
+                ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
-                    ExpectedVersion::NO_STREAM(),
                 ),
-                ExpectedVersionForStream::create(
+                ExpectedNoStream::create(
                     StreamName::fromString('stream-2'),
-                    ExpectedVersion::NO_STREAM(),
                 )
             ),
         );
@@ -139,7 +136,7 @@ class EventsForCommitTest extends TestCase
         );
 
         self::assertSame(
-            '[stream-1: -1 [no stream], stream-2: -1 [no stream]]',
+            '[[no stream-1], [no stream-2]]',
             $commit->expectedVersionForStreams->toDebugString()
         );
     }

@@ -5,7 +5,6 @@ namespace Neos\EventStore\Model;
 
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStream;
 use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
 
 final readonly class EventsForCommit
@@ -26,7 +25,7 @@ final readonly class EventsForCommit
         );
     }
 
-    public static function createEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
+    public static function createEventsForStream(StreamName $streamName, Event|Events $events): self
     {
         return new self(
             EventsForStreams::create(
@@ -35,17 +34,31 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            ExpectedVersionForStreams::create(
-                ExpectedVersionForStream::create(
+            ExpectedVersionForStreams::create()
+        );
+    }
+
+    public static function createEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
+    {
+        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
+
+        return new self(
+            EventsForStreams::create(
+                EventsForStream::create(
                     streamName: $streamName,
-                    expectedVersion: $expectedVersion
-                )
-            )
+                    events: $events instanceof Events ? $events : Events::with($events),
+                ),
+            ),
+            $expectedVersionForStream === null
+                ? ExpectedVersionForStreams::create()
+                : ExpectedVersionForStreams::create($expectedVersionForStream)
         );
     }
 
     public function withEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
     {
+        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
+
         return new self(
             $this->eventsForStreams->withAppended(
                 EventsForStream::create(
@@ -53,12 +66,9 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            $this->expectedVersionForStreams->withAppended(
-                ExpectedVersionForStream::create(
-                    streamName: $streamName,
-                    expectedVersion: $expectedVersion
-                )
-            )
+            $expectedVersionForStream === null
+                ? $this->expectedVersionForStreams
+                : $this->expectedVersionForStreams->withAppended($expectedVersionForStream),
         );
     }
 
@@ -77,13 +87,15 @@ final readonly class EventsForCommit
 
     public function withExpectedVersionForStream(StreamName $streamName, ExpectedVersion $expectedVersion): self
     {
+        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
+        if ($expectedVersionForStream === null) {
+            return $this;
+        }
+
         return new self(
             $this->eventsForStreams,
             $this->expectedVersionForStreams->withAppended(
-                ExpectedVersionForStream::create(
-                    streamName: $streamName,
-                    expectedVersion: $expectedVersion
-                )
+                $expectedVersionForStream
             )
         );
     }

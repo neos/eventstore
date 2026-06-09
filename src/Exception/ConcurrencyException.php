@@ -3,8 +3,10 @@ declare(strict_types=1);
 namespace Neos\EventStore\Exception;
 
 use Neos\EventStore\EventStoreInterface;
-use Neos\EventStore\Model\Event\StreamName;
+use Neos\EventStore\Model\EventStream\ExpectedNoStream;
+use Neos\EventStore\Model\EventStream\ExpectedStreamExists;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
+use Neos\EventStore\Model\EventStream\ExpectedVersionForStream;
 use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 
@@ -14,12 +16,11 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
  */
 final class ConcurrencyException extends \RuntimeException
 {
-    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedVersion $expectedVersion, MaybeVersion $actualVersion, StreamName $streamName, ExpectedVersionForStreams $expectedVersionForStreams): self
+    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedVersionForStream|ExpectedNoStream|ExpectedStreamExists $expectedVersionForStream, MaybeVersion $actualVersion, ExpectedVersionForStreams $expectedVersionForStreams): self
     {
         return new self(sprintf(
-            'Expected version: %s for stream "%s", actual version: %s.%s',
-            $expectedVersion->__toString(),
-            $streamName->value,
+            'Expected version: %s, actual version: %s.%s',
+            $expectedVersionForStream->toDebugString(),
             $actualVersion->__toString(),
             $expectedVersionForStreams->count() > 1 ? ' All: ' . $expectedVersionForStreams->toDebugString() : ''
         ), 1779022349);
