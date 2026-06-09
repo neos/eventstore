@@ -329,43 +329,6 @@ class EventsForCommitTest extends TestCase
         );
     }
 
-    public function test_append_same_stream_version_and_any_version(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('Duplicate constraint -2 [any] and [no stream-1]');
-
-        $commit = EventsForCommit::create(
-            EventsForStreams::create(
-                EventsForStream::create(
-                    StreamName::fromString('stream-1'),
-                    Events::with(new Event(
-                        EventId::create(),
-                        EventType::fromString('SomeEventType'),
-                        EventData::fromString('a'),
-                    ))
-                )
-            ),
-            ExpectedVersionForStreams::create(
-                ExpectedNoStream::create(
-                    StreamName::fromString('stream-1')
-                )
-            )
-        );
-
-        $commit->withEventsForStreamAndExpectedVersion(
-            StreamName::fromString('stream-1'),
-            Events::with(new Event(
-                EventId::create(),
-                EventType::fromString('SomeEventType'),
-                EventData::fromString('a'),
-            )),
-            ExpectedVersion::ANY()
-        );
-    }
-
-    /**
-     * While {@see test_append_same_stream_version_and_any_version} is forbidden, it is not straight forward to forbid using ANY multiple times consistently for the same stream - and it does not harm.
-     */
     public function test_append_same_stream_any_version_twice(): void
     {
         $commit = EventsForCommit::create(
@@ -428,7 +391,7 @@ class EventsForCommitTest extends TestCase
     }
 
     /**
-     * While {@see test_append_same_stream_version_and_any_version} is forbidden, it is allowed to write further on the stream without any checks via {@see EventsForCommit::withEventsForStream}
+     * It is allowed to write further on the stream without any checks via {@see EventsForCommit::withEventsForStream} or by using ANY()
      */
     public function test_append_same_stream_twice(): void
     {
@@ -450,8 +413,7 @@ class EventsForCommitTest extends TestCase
             )
         );
 
-        // The same
-        $commitActual = $commit->withEventsForStream(
+        $commitViaOmit = $commit->withEventsForStream(
             StreamName::fromString('stream-1'),
             Events::with($newEvent = new Event(
                 EventId::create(),
@@ -478,12 +440,24 @@ class EventsForCommitTest extends TestCase
                     )
                 )
             ),
-            $commitActual
+            $commitViaOmit
         );
 
         self::assertEquals(
             '[[no stream-1]]',
-            $commitActual->expectedVersionForStreams->toDebugString()
+            $commitViaOmit->expectedVersionForStreams->toDebugString()
+        );
+
+        // The same
+        $commitViaAny = $commit->withEventsForStreamAndExpectedVersion(
+            StreamName::fromString('stream-1'),
+            Events::with($newEvent),
+            ExpectedVersion::ANY()
+        );
+
+        self::assertEquals(
+            $commitViaOmit,
+            $commitViaAny
         );
     }
 }

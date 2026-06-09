@@ -38,16 +38,6 @@ final readonly class ExpectedVersionForStreams implements \IteratorAggregate, \C
         return new self([...$this->items, ...[$item->streamName->value => $item]]);
     }
 
-    public function has(StreamName $streamName): bool
-    {
-        return array_key_exists($streamName->value, $this->items);
-    }
-
-    public function get(StreamName $streamName): ExpectedVersionForStream|ExpectedNoStream|ExpectedStreamExists|null
-    {
-        return $this->items[$streamName->value] ?? null;
-    }
-
     public function getIterator(): \Traversable
     {
         yield from array_values($this->items);
