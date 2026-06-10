@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\EventStoreInterface;
+use Neos\EventStore\Exception\ConcurrencyException;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
 
@@ -53,6 +54,11 @@ final readonly class ExpectedVersion
         return new self($version->value);
     }
 
+    public function equals(self $other): bool
+    {
+        return $other->value === $this->value;
+    }
+
     public function toExpectedStreamVersion(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedVersionForStream|null
     {
         return match ($this->value) {
@@ -71,5 +77,41 @@ final readonly class ExpectedVersion
             self::NO_STREAM => '-1 [no stream]',
             default => (string)$this->value
         };
+    }
+
+    // Deprecated api <3
+
+    /**
+     * @deprecated with 2.0 please use {@see ExpectedVersionForStream::isSatisfiedBy()} and friends instead, can be removed with 3.0
+     * @throws ConcurrencyException
+     */
+    public function verifyVersion(MaybeVersion $version): void
+    {
+        if (!$this->isSatisfiedBy($version)) {
+            throw new ConcurrencyException(sprintf('Expected version: %s, actual version: %s', $this, $version->toDebugString()), 1651153651);
+        }
+    }
+
+    /**
+     * @deprecated with 2.0 please use {@see ExpectedVersionForStream::isSatisfiedBy()} and friends instead, can be removed with 3.0
+     */
+    public function isSatisfiedBy(MaybeVersion $version): bool
+    {
+        if ($version->isNothing()) {
+            return in_array($this->value, [self::NO_STREAM, self::ANY], true);
+        }
+        return match ($this->value) {
+            self::STREAM_EXISTS, self::ANY => true,
+            self::NO_STREAM => false,
+            default => $this->value === $version->unwrap()->value,
+        };
+    }
+
+    /**
+     * @deprecated with 2.0 please use {@see self::toDebugString()} instead, can be removed with 3.0
+     */
+    public function __toString(): string
+    {
+        return $this->toDebugString();
     }
 }
