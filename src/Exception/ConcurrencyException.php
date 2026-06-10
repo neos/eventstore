@@ -16,11 +16,11 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
  */
 final class ConcurrencyException extends \RuntimeException
 {
-    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $expectedVersionForStream, MaybeVersion $actualVersion, ExpectedVersionForStreams $expectedVersionForStreams): self
+    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $expectedStreamConstraint, MaybeVersion $actualVersion, ExpectedVersionForStreams $expectedVersionForStreams): self
     {
         return new self(sprintf(
             'Expected version: %s, actual version: %s.%s',
-            $expectedVersionForStream->toDebugString(),
+            $expectedStreamConstraint->toDebugString(),
             $actualVersion->toDebugString(),
             $expectedVersionForStreams->count() > 1 ? ' All: ' . $expectedVersionForStreams->toDebugString() : ''
         ), 1779022349);

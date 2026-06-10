@@ -40,7 +40,7 @@ final readonly class EventsForCommit
 
     public static function createEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
     {
-        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
+        $expectedStreamConstraint = $expectedVersion->toExpectedStreamConstraint($streamName);
 
         return new self(
             EventsForStreams::create(
@@ -49,16 +49,16 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            $expectedVersionForStream === null
+            $expectedStreamConstraint === null
                 ? ExpectedVersionForStreams::create()
-                : ExpectedVersionForStreams::create($expectedVersionForStream)
+                : ExpectedVersionForStreams::create($expectedStreamConstraint)
         );
     }
 
     public function withEventsForStreamAndExpectedVersion(StreamName $streamName, Event|Events $events, ExpectedVersion $expectedVersion): self
     {
-        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
-        if ($expectedVersionForStream === null) {
+        $expectedStreamConstraint = $expectedVersion->toExpectedStreamConstraint($streamName);
+        if ($expectedStreamConstraint === null) {
             return $this->withEventsForStream(
                 $streamName,
                 $events
@@ -72,7 +72,7 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            $this->expectedVersionForStreams->withAppended($expectedVersionForStream),
+            $this->expectedVersionForStreams->withAppended($expectedStreamConstraint),
         );
     }
 
@@ -91,15 +91,15 @@ final readonly class EventsForCommit
 
     public function withExpectedVersionForStream(StreamName $streamName, ExpectedVersion $expectedVersion): self
     {
-        $expectedVersionForStream = $expectedVersion->toExpectedStreamVersion($streamName);
-        if ($expectedVersionForStream === null) {
+        $expectedStreamConstraint = $expectedVersion->toExpectedStreamConstraint($streamName);
+        if ($expectedStreamConstraint === null) {
             return $this;
         }
 
         return new self(
             $this->eventsForStreams,
             $this->expectedVersionForStreams->withAppended(
-                $expectedVersionForStream
+                $expectedStreamConstraint
             )
         );
     }

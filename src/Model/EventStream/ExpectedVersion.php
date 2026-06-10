@@ -59,7 +59,7 @@ final readonly class ExpectedVersion
         return $other->value === $this->value;
     }
 
-    public function toExpectedStreamVersion(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedStreamVersion|null
+    public function toExpectedStreamConstraint(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedStreamVersion|null
     {
         return match ($this->value) {
             self::STREAM_EXISTS => ExpectedStreamExists::create($streamName),
