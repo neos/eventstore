@@ -11,17 +11,17 @@ final readonly class EventsForCommit
 {
     private function __construct(
         public EventsForStreams $eventsForStreams,
-        public ExpectedStreamConstraints $expectedVersionForStreams,
+        public ExpectedStreamConstraints $expectedStreamConstraints,
     ) {
     }
 
     public static function create(
         EventsForStreams $items,
-        ExpectedStreamConstraints $expectedVersionForStreams,
+        ExpectedStreamConstraints $expectedStreamConstraints,
     ): self {
         return new self(
             eventsForStreams: $items,
-            expectedVersionForStreams: $expectedVersionForStreams,
+            expectedStreamConstraints: $expectedStreamConstraints,
         );
     }
 
@@ -72,7 +72,7 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            $this->expectedVersionForStreams->withAppended($expectedStreamConstraint),
+            $this->expectedStreamConstraints->withAppended($expectedStreamConstraint),
         );
     }
 
@@ -85,7 +85,7 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            $this->expectedVersionForStreams
+            $this->expectedStreamConstraints
         );
     }
 
@@ -98,7 +98,7 @@ final readonly class EventsForCommit
 
         return new self(
             $this->eventsForStreams,
-            $this->expectedVersionForStreams->withAppended(
+            $this->expectedStreamConstraints->withAppended(
                 $expectedStreamConstraint
             )
         );

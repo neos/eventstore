@@ -87,10 +87,10 @@ final class InMemoryEventStore implements EventStoreInterface, WithResetInterfac
     public function commitAll(EventsForCommit $commit): CommitAllResult
     {
         // validation
-        foreach ($commit->expectedVersionForStreams as $expectedStreamConstraint) {
+        foreach ($commit->expectedStreamConstraints as $expectedStreamConstraint) {
             $maybeVersion = MaybeVersion::fromVersionOrNull($this->streamVersions[$expectedStreamConstraint->streamName->value] ?? null);
             if (!$expectedStreamConstraint->isSatisfiedBy($maybeVersion)) {
-                throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpectedConstraint($expectedStreamConstraint, $maybeVersion, $commit->expectedVersionForStreams);
+                throw ConcurrencyException::becauseVersionOfStreamDoesNotMatchExpectedConstraint($expectedStreamConstraint, $maybeVersion, $commit->expectedStreamConstraints);
             }
         }
 

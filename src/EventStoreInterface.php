@@ -58,7 +58,7 @@ interface EventStoreInterface
      * Append one or more events to the specified streams
      *
      * @param EventsForCommit $commit The event(s) to append to their respective stream(s)
-     * @throws ConcurrencyException in case that any of the $commit->expectedVersionForStreams check fails. Nothing is commited.
+     * @throws ConcurrencyException in case that any of the $commit->expectedStreamConstraints check fails. Nothing is commited.
      */
     public function commitAll(EventsForCommit $commit): CommitAllResult;
 }

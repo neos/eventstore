@@ -280,7 +280,7 @@ class EventsForCommitTest extends TestCase
 
         self::assertSame(
             '[[no stream-1], [no stream-2]]',
-            $commit->expectedVersionForStreams->toDebugString()
+            $commit->expectedStreamConstraints->toDebugString()
         );
     }
 
@@ -375,7 +375,7 @@ class EventsForCommitTest extends TestCase
 
         self::assertEquals(
             '[]',
-            $commitViaAny->expectedVersionForStreams->toDebugString()
+            $commitViaAny->expectedStreamConstraints->toDebugString()
         );
 
         // The same
@@ -445,7 +445,7 @@ class EventsForCommitTest extends TestCase
 
         self::assertEquals(
             '[[no stream-1]]',
-            $commitViaOmit->expectedVersionForStreams->toDebugString()
+            $commitViaOmit->expectedStreamConstraints->toDebugString()
         );
 
         // The same
