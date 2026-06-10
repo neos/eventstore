@@ -5,19 +5,19 @@ namespace Neos\EventStore\Model;
 
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
+use Neos\EventStore\Model\EventStream\ExpectedStreamConstraints;
 
 final readonly class EventsForCommit
 {
     private function __construct(
         public EventsForStreams $eventsForStreams,
-        public ExpectedVersionForStreams $expectedVersionForStreams,
+        public ExpectedStreamConstraints $expectedVersionForStreams,
     ) {
     }
 
     public static function create(
         EventsForStreams $items,
-        ExpectedVersionForStreams $expectedVersionForStreams,
+        ExpectedStreamConstraints $expectedVersionForStreams,
     ): self {
         return new self(
             eventsForStreams: $items,
@@ -34,7 +34,7 @@ final readonly class EventsForCommit
                     events: $events instanceof Events ? $events : Events::with($events),
                 ),
             ),
-            ExpectedVersionForStreams::create()
+            ExpectedStreamConstraints::none()
         );
     }
 
@@ -50,8 +50,8 @@ final readonly class EventsForCommit
                 ),
             ),
             $expectedStreamConstraint === null
-                ? ExpectedVersionForStreams::create()
-                : ExpectedVersionForStreams::create($expectedStreamConstraint)
+                ? ExpectedStreamConstraints::none()
+                : ExpectedStreamConstraints::create($expectedStreamConstraint)
         );
     }
 

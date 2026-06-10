@@ -8,7 +8,7 @@ use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventsForCommit;
 use Neos\EventStore\Model\EventStream\ExpectedNoStream;
 use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
+use Neos\EventStore\Model\EventStream\ExpectedStreamConstraints;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -19,13 +19,13 @@ class ExpectedVersionForStreamTest extends TestCase
     {
         self::assertCount(
             0,
-            ExpectedVersionForStreams::create()
+            ExpectedStreamConstraints::create()
         );
     }
 
     public function test_append(): void
     {
-        $expected = ExpectedVersionForStreams::create(
+        $expected = ExpectedStreamConstraints::create(
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),
@@ -35,7 +35,7 @@ class ExpectedVersionForStreamTest extends TestCase
             )
         );
 
-        $actual = ExpectedVersionForStreams::create(
+        $actual = ExpectedStreamConstraints::create(
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1')
             )
@@ -57,7 +57,7 @@ class ExpectedVersionForStreamTest extends TestCase
         $this->expectException(DuplicateVersionConstraintException::class);
         $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [stream-1 equals 20]');
 
-        ExpectedVersionForStreams::create(
+        ExpectedStreamConstraints::create(
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),
@@ -77,7 +77,7 @@ class ExpectedVersionForStreamTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [no stream-1]');
 
-        $subject = ExpectedVersionForStreams::create(
+        $subject = ExpectedStreamConstraints::create(
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),

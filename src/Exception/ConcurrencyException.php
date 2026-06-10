@@ -7,7 +7,7 @@ use Neos\EventStore\Model\EventStream\ExpectedNoStream;
 use Neos\EventStore\Model\EventStream\ExpectedStreamExists;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
+use Neos\EventStore\Model\EventStream\ExpectedStreamConstraints;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
@@ -16,7 +16,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
  */
 final class ConcurrencyException extends \RuntimeException
 {
-    public static function becauseVersionOfStreamDoesNotMatchExpected(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $expectedStreamConstraint, MaybeVersion $actualVersion, ExpectedVersionForStreams $expectedVersionForStreams): self
+    public static function becauseVersionOfStreamDoesNotMatchExpectedConstraint(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $expectedStreamConstraint, MaybeVersion $actualVersion, ExpectedStreamConstraints $expectedVersionForStreams): self
     {
         return new self(sprintf(
             'Expected version: %s, actual version: %s.%s',

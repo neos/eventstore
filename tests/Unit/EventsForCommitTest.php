@@ -16,7 +16,7 @@ use Neos\EventStore\Model\EventStream\ExpectedNoStream;
 use Neos\EventStore\Model\EventStream\ExpectedStreamExists;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
 use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
+use Neos\EventStore\Model\EventStream\ExpectedStreamConstraints;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +30,7 @@ class EventsForCommitTest extends TestCase
         EventsForCommit::create(
             /** @phpstan-ignore-next-line */
             EventsForStreams::create(),
-            ExpectedVersionForStreams::create(),
+            ExpectedStreamConstraints::create(),
         );
     }
 
@@ -47,7 +47,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
                 )
@@ -83,7 +83,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedStreamExists::create(
                     StreamName::fromString('stream-1'),
                 )
@@ -119,7 +119,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create(),
+            ExpectedStreamConstraints::create(),
         );
 
         $actual = EventsForCommit::createEventsForStreamAndExpectedVersion(
@@ -151,7 +151,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedStreamVersion::create(
                     StreamName::fromString('stream-1'),
                     Event\Version::fromInteger(12)
@@ -196,7 +196,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 ),
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
                 ),
@@ -260,7 +260,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 ),
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
                 ),
@@ -308,7 +308,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 ),
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedNoStream::create(
                     StreamName::fromString('stream-1'),
                 ),
@@ -342,7 +342,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create()
+            ExpectedStreamConstraints::create()
         );
 
         $commitViaAny = $commit->withEventsForStreamAndExpectedVersion(
@@ -368,7 +368,7 @@ class EventsForCommitTest extends TestCase
                         Events::with($newEvent)
                     )
                 ),
-                ExpectedVersionForStreams::create()
+                ExpectedStreamConstraints::create()
             ),
             $commitViaAny
         );
@@ -406,7 +406,7 @@ class EventsForCommitTest extends TestCase
                     )),
                 )
             ),
-            ExpectedVersionForStreams::create(
+            ExpectedStreamConstraints::create(
                 ExpectedNoStream::create(
                     StreamName::fromString('stream-1')
                 )
@@ -434,7 +434,7 @@ class EventsForCommitTest extends TestCase
                         Events::with($newEvent)
                     )
                 ),
-                ExpectedVersionForStreams::create(
+                ExpectedStreamConstraints::create(
                     ExpectedNoStream::create(
                         StreamName::fromString('stream-1')
                     )

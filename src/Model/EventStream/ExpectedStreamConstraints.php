@@ -4,17 +4,21 @@ declare(strict_types=1);
 namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\Exception\DuplicateVersionConstraintException;
-use Neos\EventStore\Model\Event\StreamName;
 
 /**
  * @implements \IteratorAggregate<int,ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists>
  */
-final readonly class ExpectedVersionForStreams implements \IteratorAggregate, \Countable
+final readonly class ExpectedStreamConstraints implements \IteratorAggregate, \Countable
 {
     /** @param array<string,ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists> $items */
     private function __construct(
         private array $items
     ) {
+    }
+
+    public static function none(): self
+    {
+        return new self([]);
     }
 
     public static function create(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists ...$items): self
