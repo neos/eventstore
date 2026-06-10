@@ -6,7 +6,7 @@ namespace Neos\EventStore\Model\EventStream;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
 
-final readonly class ExpectedVersionForStream
+final readonly class ExpectedStreamVersion
 {
     private function __construct(
         public StreamName $streamName,

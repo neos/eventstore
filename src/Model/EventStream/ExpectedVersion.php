@@ -59,13 +59,13 @@ final readonly class ExpectedVersion
         return $other->value === $this->value;
     }
 
-    public function toExpectedStreamVersion(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedVersionForStream|null
+    public function toExpectedStreamVersion(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedStreamVersion|null
     {
         return match ($this->value) {
             self::STREAM_EXISTS => ExpectedStreamExists::create($streamName),
             self::ANY => null,
             self::NO_STREAM => ExpectedNoStream::create($streamName),
-            default => ExpectedVersionForStream::create($streamName, Version::fromInteger($this->value))
+            default => ExpectedStreamVersion::create($streamName, Version::fromInteger($this->value))
         };
     }
 
@@ -82,7 +82,7 @@ final readonly class ExpectedVersion
     // Deprecated api <3
 
     /**
-     * @deprecated with 2.0 please use {@see ExpectedVersionForStream::isSatisfiedBy()} and friends instead, can be removed with 3.0
+     * @deprecated with 2.0 please use {@see ExpectedStreamVersion::isSatisfiedBy()} and friends instead, can be removed with 3.0
      * @throws ConcurrencyException
      */
     public function verifyVersion(MaybeVersion $version): void
@@ -93,7 +93,7 @@ final readonly class ExpectedVersion
     }
 
     /**
-     * @deprecated with 2.0 please use {@see ExpectedVersionForStream::isSatisfiedBy()} and friends instead, can be removed with 3.0
+     * @deprecated with 2.0 please use {@see ExpectedStreamVersion::isSatisfiedBy()} and friends instead, can be removed with 3.0
      */
     public function isSatisfiedBy(MaybeVersion $version): bool
     {

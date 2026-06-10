@@ -7,7 +7,7 @@ use Neos\EventStore\Model\Event;
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventsForCommit;
 use Neos\EventStore\Model\EventStream\ExpectedNoStream;
-use Neos\EventStore\Model\EventStream\ExpectedVersionForStream;
+use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
 use Neos\EventStore\Model\EventStream\ExpectedVersionForStreams;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +29,7 @@ class ExpectedVersionForStreamTest extends TestCase
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),
-            ExpectedVersionForStream::create(
+            ExpectedStreamVersion::create(
                 StreamName::fromString('stream-2'),
                 Event\Version::fromInteger(20)
             )
@@ -40,7 +40,7 @@ class ExpectedVersionForStreamTest extends TestCase
                 StreamName::fromString('stream-1')
             )
         )->withAppended(
-            ExpectedVersionForStream::create(
+            ExpectedStreamVersion::create(
                 StreamName::fromString('stream-2'),
                 Event\Version::fromInteger(20)
             )
@@ -61,11 +61,11 @@ class ExpectedVersionForStreamTest extends TestCase
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),
-            ExpectedVersionForStream::create(
+            ExpectedStreamVersion::create(
                 StreamName::fromString('stream-2'),
                 Event\Version::fromInteger(20)
             ),
-            ExpectedVersionForStream::create(
+            ExpectedStreamVersion::create(
                 StreamName::fromString('stream-1'),
                 Event\Version::fromInteger(20)
             ),
@@ -81,7 +81,7 @@ class ExpectedVersionForStreamTest extends TestCase
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
             ),
-            ExpectedVersionForStream::create(
+            ExpectedStreamVersion::create(
                 StreamName::fromString('stream-2'),
                 Event\Version::fromInteger(20)
             )
