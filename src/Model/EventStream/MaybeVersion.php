@@ -20,9 +20,19 @@ final readonly class MaybeVersion
         return new self($version);
     }
 
+    /**
+     * @template T
+     * @param T $fallback
+     * @return T|Version
+     */
     public function versionOr(mixed $fallback): mixed
     {
         return $this->version ?? $fallback;
+    }
+
+    public function nextVersionOrFirst(): Version
+    {
+        return $this->version === null ? Version::first() : $this->version->next();
     }
 
     public function isNothing(): bool
@@ -38,7 +48,7 @@ final readonly class MaybeVersion
         return $this->version;
     }
 
-    public function __toString(): string
+    public function toDebugString(): string
     {
         return $this->version === null ? '[none]' : (string)$this->version->value;
     }

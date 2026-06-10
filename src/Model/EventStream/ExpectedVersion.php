@@ -4,8 +4,8 @@ namespace Neos\EventStore\Model\EventStream;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Exception\ConcurrencyException;
+use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
-use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
  * The expected version of a stream when committing new events to it
@@ -59,16 +59,42 @@ final readonly class ExpectedVersion
         return $other->value === $this->value;
     }
 
+    public function toExpectedStreamConstraint(StreamName $streamName): ExpectedStreamExists|ExpectedNoStream|ExpectedStreamVersion|null
+    {
+        return match ($this->value) {
+            self::STREAM_EXISTS => ExpectedStreamExists::create($streamName),
+            self::ANY => null,
+            self::NO_STREAM => ExpectedNoStream::create($streamName),
+            default => ExpectedStreamVersion::create($streamName, Version::fromInteger($this->value))
+        };
+    }
+
+    public function toDebugString(): string
+    {
+        return match ($this->value) {
+            self::STREAM_EXISTS => '-4 [stream exists]',
+            self::ANY => '-2 [any]',
+            self::NO_STREAM => '-1 [no stream]',
+            default => (string)$this->value
+        };
+    }
+
+    // Deprecated api <3
+
     /**
+     * @deprecated with 2.0 please use {@see ExpectedStreamVersion::isSatisfiedBy()} and friends instead, can be removed with 3.0
      * @throws ConcurrencyException
      */
     public function verifyVersion(MaybeVersion $version): void
     {
         if (!$this->isSatisfiedBy($version)) {
-            throw new ConcurrencyException(sprintf('Expected version: %s, actual version: %s', $this, $version), 1651153651);
+            throw new ConcurrencyException(sprintf('Expected version: %s, actual version: %s', $this, $version->toDebugString()), 1651153651);
         }
     }
 
+    /**
+     * @deprecated with 2.0 please use {@see ExpectedStreamVersion::isSatisfiedBy()} and friends instead, can be removed with 3.0
+     */
     public function isSatisfiedBy(MaybeVersion $version): bool
     {
         if ($version->isNothing()) {
@@ -81,13 +107,11 @@ final readonly class ExpectedVersion
         };
     }
 
+    /**
+     * @deprecated with 2.0 please use {@see self::toDebugString()} instead, can be removed with 3.0
+     */
     public function __toString(): string
     {
-        return match ($this->value) {
-            self::STREAM_EXISTS => '-4 [stream exists]',
-            self::ANY => '-2 [any]',
-            self::NO_STREAM => '-1 [no stream]',
-            default => (string)$this->value
-        };
+        return $this->toDebugString();
     }
 }

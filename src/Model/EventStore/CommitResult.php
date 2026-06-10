@@ -18,4 +18,12 @@ final readonly class CommitResult
         public SequenceNumber $highestCommittedSequenceNumber,
     ) {
     }
+
+    public static function fromCommitAll(CommitAllResult $commitResult): self
+    {
+        return new self(
+            highestCommittedVersion: $commitResult->versionForStreams->first()->version,
+            highestCommittedSequenceNumber: $commitResult->highestCommittedSequenceNumber,
+        );
+    }
 }
