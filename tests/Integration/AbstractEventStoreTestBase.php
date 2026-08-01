@@ -257,10 +257,41 @@ abstract class AbstractEventStoreTestBase extends TestCase
         self::assertSame(7, $commitResult->highestCommittedSequenceNumber->value);
     }
 
-    public function test_commitAll_expectVersion_success_unrelated_stream(): void
+    public function test_commitAll_expectVersion_same_stream_segmented_success(): void
     {
-        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'unrelated-stream');
+        $commitResult = $this->getEventStore()->commitAll(
+            EventsForCommit::createEventsForStreamAndExpectedVersion(
+                StreamName::fromString('stream-1'),
+                Events::fromArray(array_map(
+                    fn (string $char) => $this->convertEvent(['data' => $char]),
+                    range('a', 'c')
+                )),
+                ExpectedVersion::NO_STREAM()
+            )->withEventsForStream(
+                StreamName::fromString('stream-1'),
+                Events::fromArray(array_map(
+                    fn (string $char) => $this->convertEvent(['data' => $char]),
+                    range('d', 'f')
+                )),
+            )
+        );
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['streamName' => 'stream-1', 'sequenceNumber' => 1, 'version' => 0],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 2, 'version' => 1],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 3, 'version' => 2],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 4, 'version' => 3],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 5, 'version' => 4],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 6, 'version' => 5],
+        ]);
+        self::assertSame(6, $commitResult->highestCommittedSequenceNumber->value);
+        self::assertEquals([
+            VersionForStream::create(StreamName::fromString('stream-1'), Version::fromInteger(5)),
+        ], iterator_to_array($commitResult->versionForStreams));
+    }
 
+
+    public function test_commitAll_expectVersion_same_stream_multiple_segmented_success(): void
+    {
         $commitResult = $this->getEventStore()->commitAll(
             EventsForCommit::createEventsForStreamAndExpectedVersion(
                 StreamName::fromString('stream-1'),
@@ -281,6 +312,48 @@ abstract class AbstractEventStoreTestBase extends TestCase
                     fn (string $char) => $this->convertEvent(['data' => $char]),
                     range('d', 'f')
                 )),
+            )->withEventsForStream(
+                StreamName::fromString('stream-1'),
+                Events::with(
+                    $this->convertEvent(['data' => 'g'])
+                ),
+            )
+        );
+        self::assertEventStream($this->getEventStore()->load(VirtualStreamName::all()), [
+            ['streamName' => 'stream-1', 'sequenceNumber' => 1, 'version' => 0],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 2, 'version' => 1],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 3, 'version' => 2],
+            ['streamName' => 'stream-2', 'sequenceNumber' => 4, 'version' => 0],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 5, 'version' => 3],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 6, 'version' => 4],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 7, 'version' => 5],
+            ['streamName' => 'stream-1', 'sequenceNumber' => 8, 'version' => 6],
+        ]);
+        self::assertSame(8, $commitResult->highestCommittedSequenceNumber->value);
+        self::assertEquals([
+            VersionForStream::create(StreamName::fromString('stream-1'), Version::fromInteger(6)),
+            VersionForStream::create(StreamName::fromString('stream-2'), Version::fromInteger(0)),
+        ], iterator_to_array($commitResult->versionForStreams));
+    }
+
+    public function test_commitAll_expectVersion_success_unrelated_stream(): void
+    {
+        $this->commitEvents(array_map(static fn ($char) => ['data' => $char], range('a', 'c')), 'unrelated-stream');
+
+        $commitResult = $this->getEventStore()->commitAll(
+            EventsForCommit::createEventsForStreamAndExpectedVersion(
+                StreamName::fromString('stream-1'),
+                Events::fromArray(array_map(
+                    fn (string $char) => $this->convertEvent(['data' => $char]),
+                    range('a', 'c')
+                )),
+                ExpectedVersion::NO_STREAM()
+            )->withEventsForStreamAndExpectedVersion(
+                StreamName::fromString('stream-2'),
+                Events::with(
+                    $this->convertEvent(['data' => 'x'])
+                ),
+                ExpectedVersion::NO_STREAM()
             )->withExpectedVersionForStream(
                 StreamName::fromString('unrelated-stream'),
                 ExpectedVersion::fromVersion(Version::fromInteger(2))
@@ -294,13 +367,10 @@ abstract class AbstractEventStoreTestBase extends TestCase
             ['streamName' => 'stream-1', 'sequenceNumber' => 5, 'version' => 1],
             ['streamName' => 'stream-1', 'sequenceNumber' => 6, 'version' => 2],
             ['streamName' => 'stream-2', 'sequenceNumber' => 7, 'version' => 0],
-            ['streamName' => 'stream-1', 'sequenceNumber' => 8, 'version' => 3],
-            ['streamName' => 'stream-1', 'sequenceNumber' => 9, 'version' => 4],
-            ['streamName' => 'stream-1', 'sequenceNumber' => 10, 'version' => 5],
         ]);
-        self::assertSame(10, $commitResult->highestCommittedSequenceNumber->value);
+        self::assertSame(7, $commitResult->highestCommittedSequenceNumber->value);
         self::assertEquals([
-            VersionForStream::create(StreamName::fromString('stream-1'), Version::fromInteger(5)),
+            VersionForStream::create(StreamName::fromString('stream-1'), Version::fromInteger(2)),
             VersionForStream::create(StreamName::fromString('stream-2'), Version::fromInteger(0)),
         ], iterator_to_array($commitResult->versionForStreams));
     }
