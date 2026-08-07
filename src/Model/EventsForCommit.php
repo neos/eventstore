@@ -16,11 +16,11 @@ final readonly class EventsForCommit
     }
 
     public static function create(
-        EventsForStreams $items,
+        EventsForStreams $eventsForStreams,
         ExpectedStreamConstraints $expectedStreamConstraints,
     ): self {
         return new self(
-            eventsForStreams: $items,
+            eventsForStreams: $eventsForStreams,
             expectedStreamConstraints: $expectedStreamConstraints,
         );
     }
