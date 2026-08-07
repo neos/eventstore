@@ -8,9 +8,9 @@ namespace Neos\EventStore\Model;
  */
 final readonly class EventsForStreams implements \IteratorAggregate, \Countable
 {
-    /** @param list<EventsForStream> $items */
+    /** @param non-empty-list<EventsForStream> $items */
     private function __construct(
-        public array $items
+        private array $items
     ) {
     }
 
