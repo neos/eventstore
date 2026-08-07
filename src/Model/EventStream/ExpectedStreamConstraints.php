@@ -42,6 +42,16 @@ final readonly class ExpectedStreamConstraints implements \IteratorAggregate, \C
         return new self([...$this->items, ...[$item->streamName->value => $item]]);
     }
 
+    public function merge(self $other): self
+    {
+        $intersection = array_intersect_key($this->items, $other->items);
+        if ($intersection !== []) {
+            $firstViolation = array_key_first($intersection);
+            throw DuplicateVersionConstraintException::becauseExpectedStreamVersionIsDuplicate($this->items[$firstViolation], $other->items[$firstViolation]);
+        }
+        return new self([...$this->items, ...$other->items]);
+    }
+
     public function getIterator(): \Traversable
     {
         yield from array_values($this->items);

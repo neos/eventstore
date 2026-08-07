@@ -52,6 +52,45 @@ class ExpectedVersionForStreamTest extends TestCase
         );
     }
 
+    public function test_merge(): void
+    {
+        $expected = ExpectedStreamConstraints::create(
+            ExpectedNoStream::create(
+                StreamName::fromString('stream-1'),
+            ),
+            ExpectedStreamVersion::create(
+                StreamName::fromString('stream-2'),
+                Event\Version::fromInteger(20)
+            ),
+            ExpectedStreamVersion::create(
+                StreamName::fromString('stream-3'),
+                Event\Version::fromInteger(1)
+            ),
+        );
+
+        $actual = ExpectedStreamConstraints::create(
+            ExpectedNoStream::create(
+                StreamName::fromString('stream-1')
+            )
+        )->merge(
+            ExpectedStreamConstraints::create(
+                ExpectedStreamVersion::create(
+                    StreamName::fromString('stream-2'),
+                    Event\Version::fromInteger(20)
+                ),
+                ExpectedStreamVersion::create(
+                    StreamName::fromString('stream-3'),
+                    Event\Version::fromInteger(1)
+                ),
+            )
+        );
+
+        self::assertEquals(
+            $expected,
+            $actual
+        );
+    }
+
     public function test_list_same_stream_twice_create(): void
     {
         $this->expectException(DuplicateVersionConstraintException::class);
@@ -90,6 +129,63 @@ class ExpectedVersionForStreamTest extends TestCase
         $subject->withAppended(
             ExpectedNoStream::create(
                 StreamName::fromString('stream-1'),
+            )
+        );
+    }
+
+    public function test_list_same_stream_twice_merge(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate constraint [no stream-1] and [no stream-1]');
+
+        $subject = ExpectedStreamConstraints::create(
+            ExpectedNoStream::create(
+                StreamName::fromString('stream-1'),
+            ),
+            ExpectedStreamVersion::create(
+                StreamName::fromString('stream-2'),
+                Event\Version::fromInteger(20)
+            )
+        );
+
+        $subject->merge(
+            ExpectedStreamConstraints::create(
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-other'),
+                ),
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-1'),
+                ),
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-other-2'),
+                )
+            )
+        );
+    }
+
+    public function test_list_multiple_streams_twice_merge(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Duplicate constraint [stream-2 equals 20] and [no stream-2]');
+
+        $subject = ExpectedStreamConstraints::create(
+            ExpectedStreamVersion::create(
+                StreamName::fromString('stream-2'),
+                Event\Version::fromInteger(20)
+            ),
+            ExpectedNoStream::create(
+                StreamName::fromString('stream-1'),
+            ),
+        );
+
+        $subject->merge(
+            ExpectedStreamConstraints::create(
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-1'),
+                ),
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-2'),
+                )
             )
         );
     }
