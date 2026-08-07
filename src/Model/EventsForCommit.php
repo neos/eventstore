@@ -16,11 +16,11 @@ final readonly class EventsForCommit
     }
 
     public static function create(
-        EventsForStreams $items,
+        EventsForStreams $eventsForStreams,
         ExpectedStreamConstraints $expectedStreamConstraints,
     ): self {
         return new self(
-            eventsForStreams: $items,
+            eventsForStreams: $eventsForStreams,
             expectedStreamConstraints: $expectedStreamConstraints,
         );
     }
@@ -101,6 +101,14 @@ final readonly class EventsForCommit
             $this->expectedStreamConstraints->withAppended(
                 $expectedStreamConstraint
             )
+        );
+    }
+
+    public function merge(self $other): self
+    {
+        return new self(
+            eventsForStreams: $this->eventsForStreams->merge($other->eventsForStreams),
+            expectedStreamConstraints: $this->expectedStreamConstraints->merge($other->expectedStreamConstraints)
         );
     }
 }

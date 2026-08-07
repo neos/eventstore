@@ -8,9 +8,9 @@ namespace Neos\EventStore\Model;
  */
 final readonly class EventsForStreams implements \IteratorAggregate, \Countable
 {
-    /** @param list<EventsForStream> $items */
+    /** @param non-empty-list<EventsForStream> $items */
     private function __construct(
-        public array $items
+        private array $items
     ) {
     }
 
@@ -22,6 +22,11 @@ final readonly class EventsForStreams implements \IteratorAggregate, \Countable
     public function withAppended(EventsForStream $item): self
     {
         return new self([...$this->items, $item]);
+    }
+
+    public function merge(self $other): self
+    {
+        return new self([...$this->items, ...$other->items]);
     }
 
     public function getIterator(): \Traversable
