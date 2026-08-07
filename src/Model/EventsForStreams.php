@@ -24,6 +24,11 @@ final readonly class EventsForStreams implements \IteratorAggregate, \Countable
         return new self([...$this->items, $item]);
     }
 
+    public function merge(self $other): self
+    {
+        return new self([...$this->items, ...$other->items]);
+    }
+
     public function getIterator(): \Traversable
     {
         yield from $this->items;

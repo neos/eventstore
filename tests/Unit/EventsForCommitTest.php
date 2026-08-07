@@ -231,7 +231,7 @@ class EventsForCommitTest extends TestCase
         );
     }
 
-    public function test_append_same_strea(): void
+    public function test_append_same_stream(): void
     {
         $commit = EventsForCommit::create(
             EventsForStreams::create(
@@ -458,6 +458,79 @@ class EventsForCommitTest extends TestCase
         self::assertEquals(
             $commitViaOmit,
             $commitViaAny
+        );
+    }
+
+    public function test_merge(): void
+    {
+        $expected = EventsForCommit::create(
+            EventsForStreams::create(
+                EventsForStream::create(
+                    StreamName::fromString('stream-1'),
+                    Events::with(new Event(
+                        $id1 = EventId::create(),
+                        EventType::fromString('SomeEventType'),
+                        EventData::fromString('a'),
+                    )),
+                ),
+                EventsForStream::create(
+                    StreamName::fromString('stream-2'),
+                    Events::with(new Event(
+                        $id2 = EventId::create(),
+                        EventType::fromString('SomeOther'),
+                        EventData::fromString('a'),
+                    )),
+                ),
+                EventsForStream::create(
+                    StreamName::fromString('stream-3'),
+                    Events::with(new Event(
+                        $id3 = EventId::create(),
+                        EventType::fromString('SomeThird'),
+                        EventData::fromString('b'),
+                    )),
+                ),
+            ),
+            ExpectedStreamConstraints::create(
+                ExpectedNoStream::create(
+                    StreamName::fromString('stream-1'),
+                ),
+                ExpectedStreamVersion::create(
+                    StreamName::fromString('stream-2'),
+                    Event\Version::fromInteger(20)
+                )
+            ),
+        );
+
+        $actual = EventsForCommit::createEventsForStreamAndExpectedVersion(
+            StreamName::fromString('stream-1'),
+            Events::with(new Event(
+                $id1,
+                EventType::fromString('SomeEventType'),
+                EventData::fromString('a'),
+            )),
+            ExpectedVersion::NO_STREAM()
+        )->merge(
+            EventsForCommit::createEventsForStreamAndExpectedVersion(
+                StreamName::fromString('stream-2'),
+                Events::with(new Event(
+                    $id2,
+                    EventType::fromString('SomeOther'),
+                    EventData::fromString('a'),
+                )),
+                ExpectedVersion::fromVersion(Event\Version::fromInteger(20))
+            )->withEventsForStream(
+                StreamName::fromString('stream-3'),
+                Events::with(new Event(
+                    $id3,
+                    EventType::fromString('SomeThird'),
+                    EventData::fromString('b'),
+                )),
+            )
+        );
+
+        self::assertEquals(
+            $expected,
+            $actual
         );
     }
 }

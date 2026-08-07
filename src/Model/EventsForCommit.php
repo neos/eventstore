@@ -103,4 +103,12 @@ final readonly class EventsForCommit
             )
         );
     }
+
+    public function merge(self $other): self
+    {
+        return new self(
+            eventsForStreams: $this->eventsForStreams->merge($other->eventsForStreams),
+            expectedStreamConstraints: $this->expectedStreamConstraints->merge($other->expectedStreamConstraints)
+        );
+    }
 }
