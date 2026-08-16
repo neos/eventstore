@@ -8,6 +8,7 @@ use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 use Neos\EventStore\Tests\Integration\Consistency\Attempt;
 use Neos\EventStore\Tests\Integration\Consistency\AttemptGenerator;
+use Neos\EventStore\Tests\Integration\Consistency\CommitApi;
 use Neos\EventStore\Tests\Integration\Consistency\ConsistencyProfile;
 use Neos\EventStore\Tests\Integration\Consistency\ConsistencyValidator;
 use Neos\EventStore\Tests\Integration\Consistency\OpLog;
@@ -45,7 +46,7 @@ abstract class AbstractEventStoreConsistencyTestBase extends TestCase
      *
      * A run is only meaningful together with what it ran against, and that is not visible from the manifest:
      * adapters are configured through the environment (DSN, table name, …), so an adapter should mention
-     * whatever distinguishes this execution – e.g. the platform of the current Doctrine connection.
+     * whatever distinguishes this execution from a run of the same test against a different backend.
      */
     protected static function eventStoreDescription(): ?string
     {
@@ -208,12 +209,12 @@ abstract class AbstractEventStoreConsistencyTestBase extends TestCase
         $errorClass = null;
         $errorMessage = null;
         try {
-            if ($attempt->usesLegacyCommitApi()) {
-                $streamName = $attempt->legacyStreamName();
-                $commitResult = $eventStore->commit($streamName, $attempt->legacyEvents(), $attempt->legacyExpectedVersion());
+            if ($attempt->commitApi() === CommitApi::COMMIT) {
+                $singleStreamCommit = $attempt->singleStreamCommit();
+                $commitResult = $eventStore->commit($singleStreamCommit->streamName, $singleStreamCommit->events, $singleStreamCommit->expectedVersion);
                 $highestSequenceNumber = $commitResult->highestCommittedSequenceNumber->value;
-                $resultVersions[$streamName->value] = $commitResult->highestCommittedVersion->value;
-                $knowledge->recordVersion($streamName, $commitResult->highestCommittedVersion);
+                $resultVersions[$singleStreamCommit->streamName->value] = $commitResult->highestCommittedVersion->value;
+                $knowledge->recordVersion($singleStreamCommit->streamName, $commitResult->highestCommittedVersion);
             } else {
                 $commitAllResult = $eventStore->commitAll($attempt->commit);
                 $highestSequenceNumber = $commitAllResult->highestCommittedSequenceNumber->value;
@@ -239,7 +240,7 @@ abstract class AbstractEventStoreConsistencyTestBase extends TestCase
             shape: $attempt->shape,
             verdict: $attempt->verdict,
             verdictReason: $attempt->verdictReason,
-            api: $attempt->usesLegacyCommitApi() ? 'commit' : 'commitAll',
+            commitApi: $attempt->commitApi(),
             segments: $attempt->segments,
             constraints: $attempt->constraints,
             eventIds: $attempt->eventIds,

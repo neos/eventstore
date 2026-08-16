@@ -11,7 +11,7 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
  */
 enum AttemptShape: string
 {
-    // --- shapes routed through the legacy EventStoreInterface::commit() API -----
+    // --- single stream, through commit() -----
 
     case COMMIT_ANY = 'commit.any';
     case COMMIT_NO_STREAM = 'commit.no_stream';
@@ -38,16 +38,16 @@ enum AttemptShape: string
     case FOREIGN_VERSION = 'foreign.version';
 
     /**
-     * Whether this shape is executed via commit() rather than commitAll()
+     * Which of the two commit methods this shape is executed through
      *
-     * Both in-tree adapters implement commit() as a delegation to commitAll(), but the interface does not
-     * mandate that, so the legacy API keeps its own concurrent coverage.
+     * The single stream shapes cover commit(), everything else covers commitAll(); see {@see CommitApi}
+     * for why both are exercised concurrently.
      */
-    public function usesLegacyCommitApi(): bool
+    public function commitApi(): CommitApi
     {
         return match ($this) {
-            self::COMMIT_ANY, self::COMMIT_NO_STREAM, self::COMMIT_VERSION, self::COMMIT_STALE_VERSION => true,
-            default => false,
+            self::COMMIT_ANY, self::COMMIT_NO_STREAM, self::COMMIT_VERSION, self::COMMIT_STALE_VERSION => CommitApi::COMMIT,
+            default => CommitApi::COMMIT_ALL,
         };
     }
 
