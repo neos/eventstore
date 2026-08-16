@@ -9,11 +9,12 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 use Neos\EventStore\Tests\Integration\Consistency\Attempt;
 use Neos\EventStore\Tests\Integration\Consistency\AttemptGenerator;
 use Neos\EventStore\Tests\Integration\Consistency\CommitApi;
+use Neos\EventStore\Tests\Integration\Consistency\CommittedVersions;
 use Neos\EventStore\Tests\Integration\Consistency\ConsistencyProfile;
 use Neos\EventStore\Tests\Integration\Consistency\ConsistencyValidator;
+use Neos\EventStore\Tests\Integration\Consistency\ExecutionResult;
 use Neos\EventStore\Tests\Integration\Consistency\OpLog;
 use Neos\EventStore\Tests\Integration\Consistency\OpLogEntry;
-use Neos\EventStore\Tests\Integration\Consistency\Outcome;
 use Neos\EventStore\Tests\Integration\Consistency\RunManifest;
 use Neos\EventStore\Tests\Integration\Consistency\StreamKnowledge;
 use PHPUnit\Framework\Attributes\CoversNothing;
@@ -136,7 +137,8 @@ abstract class AbstractEventStoreConsistencyTestBase extends TestCase
                 if ($jitter > 0) {
                     usleep($jitter);
                 }
-                $opLog->append(self::execute($eventStore, $manifest, $attempt, $knowledge, $dataset, $pid, $jitter));
+                $result = self::execute($eventStore, $attempt, $knowledge);
+                $opLog->append(OpLogEntry::create($manifest, $attempt, $pid, $dataset, $jitter, $result));
                 $numberOfAttempts++;
             }
         } finally {
@@ -188,69 +190,32 @@ abstract class AbstractEventStoreConsistencyTestBase extends TestCase
     }
 
     /**
-     * Executes a single attempt and records everything the validator needs about it
+     * Executes a single attempt, through the commit API its shape asks for
      *
      * Every throwable is caught – including the unexpected ones – so that one adapter limitation cannot
      * kill a worker and take the rest of its run's data with it. Unexpected errors are a violation, but
      * they are reported by the validator at the end, in aggregate.
      */
-    private static function execute(
-        EventStoreInterface $eventStore,
-        RunManifest $manifest,
-        Attempt $attempt,
-        StreamKnowledge $knowledge,
-        int $dataset,
-        int $pid,
-        int $jitterMicroseconds,
-    ): OpLogEntry {
-        $outcome = Outcome::SUCCESS;
-        $highestSequenceNumber = null;
-        $resultVersions = [];
-        $errorClass = null;
-        $errorMessage = null;
+    private static function execute(EventStoreInterface $eventStore, Attempt $attempt, StreamKnowledge $knowledge): ExecutionResult
+    {
         try {
             if ($attempt->commitApi() === CommitApi::COMMIT) {
                 $singleStreamCommit = $attempt->singleStreamCommit();
                 $commitResult = $eventStore->commit($singleStreamCommit->streamName, $singleStreamCommit->events, $singleStreamCommit->expectedVersion);
-                $highestSequenceNumber = $commitResult->highestCommittedSequenceNumber->value;
-                $resultVersions[$singleStreamCommit->streamName->value] = $commitResult->highestCommittedVersion->value;
-                $knowledge->recordVersion($singleStreamCommit->streamName, $commitResult->highestCommittedVersion);
+                $highestCommittedSequenceNumber = $commitResult->highestCommittedSequenceNumber;
+                $committedVersions = CommittedVersions::forStream($singleStreamCommit->streamName, $commitResult->highestCommittedVersion);
             } else {
                 $commitAllResult = $eventStore->commitAll($attempt->commit);
-                $highestSequenceNumber = $commitAllResult->highestCommittedSequenceNumber->value;
-                foreach ($commitAllResult->versionForStreams as $versionForStream) {
-                    $resultVersions[$versionForStream->streamName->value] = $versionForStream->version->value;
-                }
-                $knowledge->recordCommitResult($commitAllResult);
+                $highestCommittedSequenceNumber = $commitAllResult->highestCommittedSequenceNumber;
+                $committedVersions = CommittedVersions::fromCommitAllResult($commitAllResult);
             }
         } catch (ConcurrencyException $exception) {
-            $outcome = Outcome::REJECTED;
-            $errorClass = $exception::class;
-            $errorMessage = $exception->getMessage();
+            return ExecutionResult::rejected($exception);
         } catch (\Throwable $exception) {
-            $outcome = Outcome::UNEXPECTED_ERROR;
-            $errorClass = $exception::class;
-            $errorMessage = $exception->getMessage();
+            return ExecutionResult::unexpectedError($exception);
         }
-        return new OpLogEntry(
-            runId: $manifest->runId,
-            commitId: $attempt->commitId,
-            pid: $pid,
-            dataset: $dataset,
-            shape: $attempt->shape,
-            verdict: $attempt->verdict,
-            verdictReason: $attempt->verdictReason,
-            commitApi: $attempt->commitApi(),
-            segments: $attempt->segments,
-            constraints: $attempt->constraints,
-            eventIds: $attempt->eventIds,
-            jitterMicroseconds: $jitterMicroseconds,
-            outcome: $outcome,
-            highestSequenceNumber: $highestSequenceNumber,
-            resultVersions: $resultVersions,
-            errorClass: $errorClass,
-            errorMessage: $errorMessage,
-        );
+        $knowledge->recordCommittedVersions($committedVersions);
+        return ExecutionResult::success($highestCommittedSequenceNumber, $committedVersions);
     }
 
     private static function readStreamVersion(EventStoreInterface $eventStore, StreamName $streamName): MaybeVersion

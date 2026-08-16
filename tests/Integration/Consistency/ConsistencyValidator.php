@@ -3,9 +3,8 @@ declare(strict_types=1);
 namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\EventStoreInterface;
+use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\Version;
-use Neos\EventStore\Model\EventStream\MaybeVersion;
-use Neos\EventStore\Model\EventStream\VirtualStreamName;
 
 /**
  * Cross-checks the contents of the event store against the op logs of every worker process
@@ -17,126 +16,33 @@ use Neos\EventStore\Model\EventStream\VirtualStreamName;
  * The op logs of all processes together also reconstruct what no single process could know: read in the
  * global order of the store, they say whether the constraints of a commit still held when it landed
  * {@see checkConstraintsHeldWhenTheCommitLanded()}.
+ *
+ * A run is validated in two phases: the {@see Attempts} and the {@see StoreContents} are read first, and
+ * every check then works on those two alone – no check reads anything itself, and none of them depend on
+ * the order they are run in.
  */
-final class ConsistencyValidator
+final readonly class ConsistencyValidator
 {
-    /**
-     * Events found in the store, grouped by the commit that claims them
-     *
-     * @var array<string, list<array{eventId: string, stream: string, version: int, sequenceNumber: int, position: int, total: int}>>
-     */
-    private array $eventsByCommitId = [];
-
-    /**
-     * Events found in the store, grouped by stream, in global sequence order
-     *
-     * @var array<string, list<array{version: int, sequenceNumber: int, eventId: string}>>
-     */
-    private array $eventsByStream = [];
-
-    /** @var array<string, OpLogEntry> */
-    private array $attemptsByCommitId = [];
-
     private function __construct(
-        private readonly RunManifest $manifest,
-        private readonly ValidationReport $report,
+        private RunManifest $manifest,
+        private ValidationReport $report,
+        private Attempts $attempts,
+        private StoreContents $store,
     ) {
     }
 
     public static function validate(EventStoreInterface $eventStore, RunManifest $manifest): ValidationReport
     {
-        $validator = new self($manifest, new ValidationReport($manifest));
-        $validator->readOpLogs();
-        $validator->readStore($eventStore);
+        $report = new ValidationReport($manifest);
+        $attempts = Attempts::fromOpLogs($manifest, $report);
+        $validator = new self($manifest, $report, $attempts, StoreContents::read($eventStore, $manifest, $attempts, $report));
         $validator->checkSuccessesArePresent();
         $validator->checkFailuresWroteNothing();
         $validator->checkConstraintsHeldWhenTheCommitLanded();
         $validator->checkStreamVersionsAreContiguous();
         $validator->checkVerdicts();
         $validator->checkCoverageAndLiveness();
-        return $validator->report;
-    }
-
-    // --- Reading -----
-
-    private function readOpLogs(): void
-    {
-        foreach (OpLog::readAll($this->manifest) as $entry) {
-            if (isset($this->attemptsByCommitId[$entry->commitId])) {
-                $this->report->addViolation('DUPLICATE_COMMIT_ID', sprintf('commitId "%s" was logged more than once', $entry->commitId));
-                continue;
-            }
-            $this->attemptsByCommitId[$entry->commitId] = $entry;
-            $this->report->recordAttempt($entry);
-        }
-        if ($this->attemptsByCommitId === []) {
-            $this->report->addViolation('NO_ATTEMPTS', sprintf('No op log entries found in "%s" – did the write phase run?', $this->manifest->directory));
-        }
-    }
-
-    private function readStore(EventStoreInterface $eventStore): void
-    {
-        $lastSequenceNumber = 0;
-        $numberOfEvents = 0;
-        foreach ($eventStore->load(VirtualStreamName::all()) as $eventEnvelope) {
-            $numberOfEvents++;
-            $sequenceNumber = $eventEnvelope->sequenceNumber->value;
-            if ($sequenceNumber <= $lastSequenceNumber) {
-                $this->report->addViolation('SEQUENCE_NOT_ASCENDING', sprintf(
-                    'Event "%s" has sequence number %d which does not exceed the previous one (%d)',
-                    $eventEnvelope->event->id->value,
-                    $sequenceNumber,
-                    $lastSequenceNumber,
-                ));
-            }
-            $lastSequenceNumber = $sequenceNumber;
-
-            $payload = self::decodePayload($eventEnvelope->event->data->value);
-            if ($payload === null) {
-                $this->report->addViolation('ORPHAN_EVENT', sprintf(
-                    'Event "%s" in stream "%s" (sequence number %d) has a payload that was not written by this harness: %s',
-                    $eventEnvelope->event->id->value,
-                    $eventEnvelope->streamName->value,
-                    $sequenceNumber,
-                    substr($eventEnvelope->event->data->value, 0, 80),
-                ));
-                continue;
-            }
-            $this->eventsByStream[$eventEnvelope->streamName->value][] = [
-                'version' => $eventEnvelope->version->value,
-                'sequenceNumber' => $sequenceNumber,
-                'eventId' => $eventEnvelope->event->id->value,
-            ];
-            if ($payload['r'] !== $this->manifest->runId) {
-                $this->report->addViolation('ORPHAN_EVENT', sprintf(
-                    'Event "%s" in stream "%s" belongs to run "%s" instead of "%s" – the store was not reset',
-                    $eventEnvelope->event->id->value,
-                    $eventEnvelope->streamName->value,
-                    $payload['r'],
-                    $this->manifest->runId,
-                ));
-                continue;
-            }
-            $attempt = $this->attemptsByCommitId[$payload['c']] ?? null;
-            if ($attempt === null) {
-                $this->report->addViolation('ORPHAN_EVENT', sprintf(
-                    'Event "%s" in stream "%s" claims commit "%s" which was never logged',
-                    $eventEnvelope->event->id->value,
-                    $eventEnvelope->streamName->value,
-                    $payload['c'],
-                ));
-                continue;
-            }
-            $this->eventsByCommitId[$payload['c']][] = [
-                'eventId' => $eventEnvelope->event->id->value,
-                'stream' => $eventEnvelope->streamName->value,
-                'version' => $eventEnvelope->version->value,
-                'sequenceNumber' => $sequenceNumber,
-                'position' => $payload['i'],
-                'total' => $payload['n'],
-            ];
-        }
-        $this->report->addNote(sprintf('%d events in store across %d streams', $numberOfEvents, count($this->eventsByStream)));
+        return $report;
     }
 
     // --- Checks -----
@@ -147,55 +53,79 @@ final class ConsistencyValidator
      */
     private function checkSuccessesArePresent(): void
     {
-        foreach ($this->attemptsByCommitId as $commitId => $attempt) {
-            if ($attempt->outcome !== Outcome::SUCCESS) {
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->result->outcome !== Outcome::SUCCESS) {
                 continue;
             }
-            $found = $this->eventsByCommitId[$commitId] ?? [];
-            if ($found === []) {
-                $this->report->addViolation('PHANTOM_SUCCESS', sprintf('%s – but none of its %d events are in the store', $attempt->toDebugString(), count($attempt->eventIds)));
+            $found = $this->store->eventsOfCommit($attempt->commitId);
+            if ($found->isEmpty()) {
+                $this->report->addViolation(Violation::PHANTOM_SUCCESS, sprintf('%s – but none of its %d events are in the store', $attempt->toDebugString(), count($attempt->eventIds)));
                 continue;
             }
             if (count($found) !== count($attempt->eventIds)) {
-                $this->report->addViolation('PARTIAL_WRITE', sprintf('%s – %d of %d events are in the store', $attempt->toDebugString(), count($found), count($attempt->eventIds)));
+                $this->report->addViolation(Violation::PARTIAL_WRITE, sprintf('%s – %d of %d events are in the store', $attempt->toDebugString(), count($found), count($attempt->eventIds)));
                 continue;
             }
+            $eventsInCommitOrder = $found->sortedByPositionInCommit();
+            $this->checkCommitLayout($attempt, $eventsInCommitOrder);
+            $this->checkCommitVersions($attempt, $eventsInCommitOrder);
+        }
+    }
 
-            usort($found, static fn (array $left, array $right) => $left['position'] <=> $right['position']);
-
-            $expectedEventIds = $attempt->eventIds;
-            $expectedStreams = self::expandSegments($attempt);
-            $previousSequenceNumber = 0;
-            foreach ($found as $index => $event) {
-                if ($event['eventId'] !== ($expectedEventIds[$index] ?? null)) {
-                    $this->report->addViolation('EVENT_ID_MISMATCH', sprintf('%s – event %d of the commit is "%s" but "%s" was written', $attempt->toDebugString(), $index + 1, $expectedEventIds[$index] ?? '(none)', $event['eventId']));
-                }
-                if ($event['stream'] !== ($expectedStreams[$index] ?? null)) {
-                    $this->report->addViolation('SEGMENT_MISMATCH', sprintf('%s – event %d belongs in stream "%s" but was written to "%s"', $attempt->toDebugString(), $index + 1, $expectedStreams[$index] ?? '(none)', $event['stream']));
-                }
-                if ($event['sequenceNumber'] <= $previousSequenceNumber) {
-                    $this->report->addViolation('COMMIT_ORDER_MISMATCH', sprintf('%s – event %d has sequence number %d which does not follow the previous event of the same commit (%d)', $attempt->toDebugString(), $index + 1, $event['sequenceNumber'], $previousSequenceNumber));
-                }
-                $previousSequenceNumber = $event['sequenceNumber'];
+    /**
+     * The events of one commit have to be the declared ones, in the declared streams, in commit order
+     */
+    private function checkCommitLayout(OpLogEntry $attempt, StoredEvents $eventsInCommitOrder): void
+    {
+        $expectedStreamNames = $attempt->segments->streamNamePerEvent();
+        $previousSequenceNumber = SequenceNumber::none();
+        $index = 0;
+        foreach ($eventsInCommitOrder as $event) {
+            $expectedEventId = $attempt->eventIds->at($index);
+            if ($expectedEventId === null || $expectedEventId->value !== $event->id->value) {
+                $this->report->addViolation(Violation::EVENT_ID_MISMATCH, sprintf('%s – event %d of the commit is "%s" but "%s" was written', $attempt->toDebugString(), $index + 1, $expectedEventId?->value ?? '(none)', $event->id->value));
             }
-
-            // versions have to continue across segments of the same stream rather than restart per segment
-            $versionsPerStream = [];
-            foreach ($found as $event) {
-                $versionsPerStream[$event['stream']][] = $event['version'];
+            $expectedStreamName = $expectedStreamNames[$index] ?? null;
+            if ($expectedStreamName === null || !$expectedStreamName->equals($event->streamName)) {
+                $this->report->addViolation(Violation::SEGMENT_MISMATCH, sprintf('%s – event %d belongs in stream "%s" but was written to "%s"', $attempt->toDebugString(), $index + 1, $expectedStreamName?->value ?? '(none)', $event->streamName->value));
             }
-            foreach ($versionsPerStream as $streamName => $versions) {
-                foreach ($versions as $index => $version) {
-                    if ($index > 0 && $version !== $versions[$index - 1] + 1) {
-                        $this->report->addViolation('COMMIT_VERSION_GAP', sprintf('%s – versions written to stream "%s" are not consecutive: %s', $attempt->toDebugString(), $streamName, implode(', ', $versions)));
-                        break;
-                    }
+            if ($event->sequenceNumber->value <= $previousSequenceNumber->value) {
+                $this->report->addViolation(Violation::COMMIT_ORDER_MISMATCH, sprintf('%s – event %d has sequence number %d which does not follow the previous event of the same commit (%d)', $attempt->toDebugString(), $index + 1, $event->sequenceNumber->value, $previousSequenceNumber->value));
+            }
+            $previousSequenceNumber = $event->sequenceNumber;
+            $index++;
+        }
+    }
+
+    /**
+     * Per stream of one commit: the versions have to continue across the segments of that stream rather
+     * than restart per segment, and they have to end at the version the store reported back
+     */
+    private function checkCommitVersions(OpLogEntry $attempt, StoredEvents $eventsInCommitOrder): void
+    {
+        foreach ($eventsInCommitOrder->groupedByStreamName() as $eventsOfStream) {
+            $versions = $eventsOfStream->versions();
+            foreach ($versions as $index => $version) {
+                if ($index > 0 && $version->value !== $versions[$index - 1]->value + 1) {
+                    $this->report->addViolation(Violation::COMMIT_VERSION_GAP, sprintf(
+                        '%s – versions written to stream "%s" are not consecutive: %s',
+                        $attempt->toDebugString(),
+                        $eventsOfStream->streamName()->value,
+                        implode(', ', array_map(static fn (Version $item) => $item->value, $versions)),
+                    ));
+                    break;
                 }
-                $reported = $attempt->resultVersions[$streamName] ?? null;
-                $actual = $versions[count($versions) - 1];
-                if ($reported !== null && $reported !== $actual) {
-                    $this->report->addViolation('RESULT_VERSION_MISMATCH', sprintf('%s – reported version %d for stream "%s" but the last event of that stream is at version %d', $attempt->toDebugString(), $reported, $streamName, $actual));
-                }
+            }
+            $reportedVersion = $attempt->result->committedVersions->versionFor($eventsOfStream->streamName());
+            $actualVersion = $eventsOfStream->last()->version;
+            if ($reportedVersion !== null && $reportedVersion->value !== $actualVersion->value) {
+                $this->report->addViolation(Violation::RESULT_VERSION_MISMATCH, sprintf(
+                    '%s – reported version %d for stream "%s" but the last event of that stream is at version %d',
+                    $attempt->toDebugString(),
+                    $reportedVersion->value,
+                    $eventsOfStream->streamName()->value,
+                    $actualVersion->value,
+                ));
             }
         }
     }
@@ -205,22 +135,22 @@ final class ConsistencyValidator
      */
     private function checkFailuresWroteNothing(): void
     {
-        foreach ($this->attemptsByCommitId as $commitId => $attempt) {
-            if ($attempt->outcome === Outcome::SUCCESS) {
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->result->outcome === Outcome::SUCCESS) {
                 continue;
             }
-            $found = $this->eventsByCommitId[$commitId] ?? [];
-            if ($found === []) {
+            $found = $this->store->eventsOfCommit($attempt->commitId);
+            if ($found->isEmpty()) {
                 continue;
             }
-            $this->report->addViolation('NON_ATOMIC_ROLLBACK', sprintf(
+            $this->report->addViolation(Violation::NON_ATOMIC_ROLLBACK, sprintf(
                 '%s – but %d of its %d events are in the store (e.g. "%s" in stream "%s" at version %d)',
                 $attempt->toDebugString(),
                 count($found),
                 count($attempt->eventIds),
-                $found[0]['eventId'],
-                $found[0]['stream'],
-                $found[0]['version'],
+                $found->first()->id->value,
+                $found->first()->streamName->value,
+                $found->first()->version->value,
             ));
         }
     }
@@ -243,53 +173,30 @@ final class ConsistencyValidator
      */
     private function checkConstraintsHeldWhenTheCommitLanded(): void
     {
-        foreach ($this->attemptsByCommitId as $commitId => $attempt) {
-            if ($attempt->outcome !== Outcome::SUCCESS) {
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->result->outcome !== Outcome::SUCCESS) {
                 continue;
             }
-            $found = $this->eventsByCommitId[$commitId] ?? [];
-            if ($found === []) {
+            $found = $this->store->eventsOfCommit($attempt->commitId);
+            if ($found->isEmpty()) {
                 // a success that wrote nothing has no place in the order – already reported as PHANTOM_SUCCESS
                 continue;
             }
-            $sequenceNumber = min(array_map(static fn (array $event) => $event['sequenceNumber'], $found));
+            $sequenceNumber = $found->lowestSequenceNumber();
             foreach ($attempt->constraints as $constraint) {
-                $maybeVersion = $this->versionBefore($constraint->streamName->value, $sequenceNumber);
+                $maybeVersion = $this->store->eventsOfStream($constraint->streamName)->versionBefore($sequenceNumber);
                 if ($constraint->isSatisfiedBy($maybeVersion)) {
                     continue;
                 }
-                $this->report->addViolation('STALE_CONSTRAINT_ACCEPTED', sprintf(
+                $this->report->addViolation(Violation::STALE_CONSTRAINT_ACCEPTED, sprintf(
                     '%s – but stream "%s" was at %s by the time the commit landed (sequence number %d)',
                     $attempt->toDebugString(),
                     $constraint->streamName->value,
                     $maybeVersion->isNothing() ? 'no version at all' : 'version ' . $maybeVersion->unwrap()->value,
-                    $sequenceNumber,
+                    $sequenceNumber->value,
                 ));
             }
         }
-    }
-
-    /**
-     * The version a stream had strictly before the given sequence number
-     */
-    private function versionBefore(string $streamName, int $sequenceNumber): MaybeVersion
-    {
-        $events = $this->eventsByStream[$streamName] ?? [];
-        // the events of a stream are collected in ascending sequence number order, so the last one below
-        // the given sequence number is a binary search rather than a scan of a stream of any size
-        $low = 0;
-        $high = count($events) - 1;
-        $version = null;
-        while ($low <= $high) {
-            $middle = intdiv($low + $high, 2);
-            if ($events[$middle]['sequenceNumber'] >= $sequenceNumber) {
-                $high = $middle - 1;
-                continue;
-            }
-            $version = Version::fromInteger($events[$middle]['version']);
-            $low = $middle + 1;
-        }
-        return MaybeVersion::fromVersionOrNull($version);
     }
 
     /**
@@ -297,21 +204,22 @@ final class ConsistencyValidator
      */
     private function checkStreamVersionsAreContiguous(): void
     {
-        foreach ($this->eventsByStream as $streamName => $events) {
-            foreach ($events as $index => $event) {
-                if ($event['version'] === $index) {
-                    continue;
+        foreach ($this->store->perStream() as $eventsOfStream) {
+            $index = 0;
+            foreach ($eventsOfStream as $event) {
+                if ($event->version->value !== $index) {
+                    $this->report->addViolation(Violation::VERSION_GAP, sprintf(
+                        'Event "%s" is number %d in stream "%s" (sequence number %d) so it should have version %d but has %d',
+                        $event->id->value,
+                        $index + 1,
+                        $event->streamName->value,
+                        $event->sequenceNumber->value,
+                        $index,
+                        $event->version->value,
+                    ));
+                    break;
                 }
-                $this->report->addViolation('VERSION_GAP', sprintf(
-                    'Event "%s" is number %d in stream "%s" (sequence number %d) so it should have version %d but has %d',
-                    $event['eventId'],
-                    $index + 1,
-                    $streamName,
-                    $event['sequenceNumber'],
-                    $index,
-                    $event['version'],
-                ));
-                break;
+                $index++;
             }
         }
     }
@@ -321,20 +229,20 @@ final class ConsistencyValidator
      */
     private function checkVerdicts(): void
     {
-        foreach ($this->attemptsByCommitId as $attempt) {
-            if ($attempt->outcome === Outcome::UNEXPECTED_ERROR) {
-                $this->report->addViolation('UNEXPECTED_ERROR', $attempt->toDebugString());
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->result->outcome === Outcome::UNEXPECTED_ERROR) {
+                $this->report->addViolation(Violation::UNEXPECTED_ERROR, $attempt->toDebugString());
                 continue;
             }
-            if ($attempt->verdict === Verdict::MUST_FAIL && $attempt->outcome === Outcome::SUCCESS) {
-                $this->report->addViolation('MUST_FAIL_SUCCEEDED', sprintf('%s – %s', $attempt->toDebugString(), $attempt->verdictReason));
+            if ($attempt->judgement->verdict === Verdict::MUST_FAIL && $attempt->result->outcome === Outcome::SUCCESS) {
+                $this->report->addViolation(Violation::MUST_FAIL_SUCCEEDED, sprintf('%s – %s', $attempt->toDebugString(), $attempt->judgement->reason));
                 continue;
             }
             if (!$this->manifest->assertMustSucceedIsNotRejected) {
                 continue;
             }
-            if ($attempt->verdict === Verdict::MUST_SUCCEED && $attempt->outcome === Outcome::REJECTED) {
-                $this->report->addViolation('MUST_SUCCEED_REJECTED', sprintf('%s – %s', $attempt->toDebugString(), $attempt->verdictReason));
+            if ($attempt->judgement->verdict === Verdict::MUST_SUCCEED && $attempt->result->outcome === Outcome::REJECTED) {
+                $this->report->addViolation(Violation::MUST_SUCCEED_REJECTED, sprintf('%s – %s', $attempt->toDebugString(), $attempt->judgement->reason));
             }
         }
     }
@@ -345,11 +253,10 @@ final class ConsistencyValidator
      */
     private function checkCoverageAndLiveness(): void
     {
-        $shapeCounts = $this->report->shapeCounts();
         foreach (AttemptShape::all() as $shape) {
-            $total = $shapeCounts[$shape->value]['total'] ?? 0;
+            $total = $this->report->countsForShape($shape)->total();
             if ($total < $this->manifest->minAttemptsPerShape) {
-                $this->report->addViolation('UNDER_COVERED_SHAPE', sprintf('Shape "%s" was attempted %d times, expected at least %d', $shape->value, $total, $this->manifest->minAttemptsPerShape));
+                $this->report->addViolation(Violation::UNDER_COVERED_SHAPE, sprintf('Shape "%s" was attempted %d times, expected at least %d', $shape->value, $total, $this->manifest->minAttemptsPerShape));
             }
         }
         $satisfiable = $this->report->totalSatisfiable();
@@ -358,56 +265,16 @@ final class ConsistencyValidator
         }
         $successRate = $this->report->totalSuccesses() / $satisfiable;
         if ($successRate < $this->manifest->minSuccessRate) {
-            $this->report->addViolation('LOW_SUCCESS_RATE', sprintf('Only %.1f%% of the %d attempts that were not doomed by construction succeeded, expected at least %.1f%%', 100 * $successRate, $satisfiable, 100 * $this->manifest->minSuccessRate));
+            $this->report->addViolation(Violation::LOW_SUCCESS_RATE, sprintf('Only %.1f%% of the %d attempts that were not doomed by construction succeeded, expected at least %.1f%%', 100 * $successRate, $satisfiable, 100 * $this->manifest->minSuccessRate));
         }
         $emptyStreams = [];
         foreach ($this->manifest->streamNames() as $streamName) {
-            if (!isset($this->eventsByStream[$streamName->value])) {
+            if ($this->store->eventsOfStream($streamName)->isEmpty()) {
                 $emptyStreams[] = $streamName->value;
             }
         }
         if ($emptyStreams !== []) {
             $this->report->addNote(sprintf('%d of %d streams received no events at all', count($emptyStreams), $this->manifest->numberOfStreams));
         }
-    }
-
-    // --- Helpers -----
-
-    /**
-     * The stream each event of the commit was supposed to end up in, in commit order
-     *
-     * @return list<string>
-     */
-    private static function expandSegments(OpLogEntry $entry): array
-    {
-        $streams = [];
-        foreach ($entry->segments as $segment) {
-            for ($i = 0; $i < $segment['count']; $i++) {
-                $streams[] = $segment['stream'];
-            }
-        }
-        return $streams;
-    }
-
-    /**
-     * @return array{r: string, c: string, i: int, n: int}|null
-     */
-    private static function decodePayload(string $data): ?array
-    {
-        try {
-            $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return null;
-        }
-        if (!is_array($payload)) {
-            return null;
-        }
-        if (!isset($payload['r'], $payload['c'], $payload['i'], $payload['n'])) {
-            return null;
-        }
-        if (!is_string($payload['r']) || !is_string($payload['c']) || !is_int($payload['i']) || !is_int($payload['n'])) {
-            return null;
-        }
-        return ['r' => $payload['r'], 'c' => $payload['c'], 'i' => $payload['i'], 'n' => $payload['n']];
     }
 }

@@ -2,10 +2,7 @@
 declare(strict_types=1);
 namespace Neos\EventStore\Tests\Integration\Consistency;
 
-use Neos\EventStore\Model\Event\StreamName;
-use Neos\EventStore\Model\EventStream\ExpectedNoStream;
-use Neos\EventStore\Model\EventStream\ExpectedStreamExists;
-use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
+use Neos\EventStore\Model\EventStream\ExpectedStreamConstraints;
 
 /**
  * The skeleton of an attempt: which streams get how many events in which order, and what is constrained
@@ -16,22 +13,24 @@ use Neos\EventStore\Model\EventStream\ExpectedStreamVersion;
  */
 final readonly class AttemptPlan
 {
-    /**
-     * @param non-empty-list<array{streamName: StreamName, count: int}> $segments in commit order; the same stream may appear more than once
-     * @param list<ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists> $constraints at most one per stream
-     */
-    public function __construct(
-        public array $segments,
-        public array $constraints,
+    private function __construct(
+        public Segments $segments,
+        public ExpectedStreamConstraints $constraints,
     ) {
+    }
+
+    public static function create(Segments $segments, ExpectedStreamConstraints $constraints): self
+    {
+        return new self($segments, $constraints);
+    }
+
+    public static function unconstrained(Segments $segments): self
+    {
+        return new self($segments, ExpectedStreamConstraints::none());
     }
 
     public function totalNumberOfEvents(): int
     {
-        $total = 0;
-        foreach ($this->segments as $segment) {
-            $total += $segment['count'];
-        }
-        return $total;
+        return $this->segments->totalNumberOfEvents();
     }
 }

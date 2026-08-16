@@ -3,7 +3,6 @@ declare(strict_types=1);
 namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\Model\Event;
-use Neos\EventStore\Model\Event\EventData;
 use Neos\EventStore\Model\Event\EventId;
 use Neos\EventStore\Model\Event\EventType;
 use Neos\EventStore\Model\Event\StreamName;
@@ -21,7 +20,7 @@ use Neos\EventStore\Model\EventStream\MaybeVersion;
 /**
  * Builds randomized commit attempts from the {@see AttemptShape} catalogue
  *
- * Every attempt is tagged with a {@see Verdict} that says what can be *proven* about its outcome from
+ * Every attempt is tagged with a {@see Judgement} that says what can be *proven* about its outcome from
  * the process' monotone {@see StreamKnowledge} alone. That is what turns an otherwise timing-dependent
  * stress test into one with a real oracle: a MUST_FAIL attempt that succeeds, or a MUST_SUCCEED attempt
  * that is rejected, is a bug regardless of how the processes interleaved.
@@ -53,50 +52,60 @@ final class AttemptGenerator
     {
         $shape = $this->pickShape();
         $plan = $this->plan($shape);
-        [$verdict, $verdictReason] = $this->judge($plan);
+        $judgement = $this->judge($plan);
         $commitId = $this->commitIdPrefix . '-' . (++$this->counter);
 
-        $total = $plan->totalNumberOfEvents();
-        $events = [];
-        $eventIds = [];
-        for ($position = 1; $position <= $total; $position++) {
-            $eventId = EventId::create();
-            $eventIds[] = $eventId->value;
-            $payload = ['r' => $this->manifest->runId, 'c' => $commitId, 'i' => $position, 'n' => $total];
-            $events[] = new Event(
-                $eventId,
-                $this->either($this->eventTypes),
-                EventData::fromString(json_encode($payload, JSON_THROW_ON_ERROR)),
-            );
-        }
-
-        $eventsForStreamList = [];
-        $segments = [];
-        $offset = 0;
-        foreach ($plan->segments as $segment) {
-            $eventsForStreamList[] = EventsForStream::create(
-                $segment['streamName'],
-                Events::fromArray(array_slice($events, $offset, $segment['count'])),
-            );
-            $segments[] = ['stream' => $segment['streamName']->value, 'count' => $segment['count']];
-            $offset += $segment['count'];
-        }
-        // the plan guarantees at least one segment, so this is never empty
-        $firstEventsForStream = array_shift($eventsForStreamList);
-
-        return new Attempt(
+        return Attempt::create(
             commitId: $commitId,
             shape: $shape,
-            verdict: $verdict,
-            verdictReason: $verdictReason,
-            segments: $segments,
-            constraints: $plan->constraints,
-            eventIds: $eventIds,
+            judgement: $judgement,
             commit: EventsForCommit::create(
-                EventsForStreams::create($firstEventsForStream, ...$eventsForStreamList),
-                ExpectedStreamConstraints::create(...$plan->constraints),
+                $this->distribute($this->events($commitId, $plan->totalNumberOfEvents()), $plan->segments),
+                $plan->constraints,
             ),
         );
+    }
+
+    /**
+     * Hands the events of a commit to the segments of its layout, in commit order
+     *
+     * @param list<Event> $events
+     */
+    private function distribute(array $events, Segments $segments): EventsForStreams
+    {
+        $eventsForStreamList = [];
+        $offset = 0;
+        foreach ($segments as $segment) {
+            $eventsForStreamList[] = EventsForStream::create(
+                $segment->streamName,
+                Events::fromArray(array_slice($events, $offset, $segment->numberOfEvents)),
+            );
+            $offset += $segment->numberOfEvents;
+        }
+        $firstEventsForStream = array_shift($eventsForStreamList);
+        if ($firstEventsForStream === null) {
+            throw new \RuntimeException('A commit has to consist of at least one segment', 1781013024);
+        }
+        return EventsForStreams::create($firstEventsForStream, ...$eventsForStreamList);
+    }
+
+    /**
+     * The events of one commit, each stamped with its position within that commit
+     *
+     * @return list<Event>
+     */
+    private function events(string $commitId, int $numberOfEvents): array
+    {
+        $events = [];
+        for ($position = 1; $position <= $numberOfEvents; $position++) {
+            $payload = EventPayload::create($this->manifest->runId, $commitId, $position, $numberOfEvents);
+            $events[] = new Event(
+                EventId::create(),
+                $this->either($this->eventTypes),
+                $payload->toEventData(),
+            );
+        }
+        return $events;
     }
 
     // --- Shape selection -----
@@ -124,7 +133,7 @@ final class AttemptGenerator
     {
         return match ($shape) {
             AttemptShape::COMMIT_ANY, AttemptShape::SINGLE_UNCONSTRAINED
-                => new AttemptPlan([$this->segment($this->either($this->streamPool))], []),
+                => AttemptPlan::unconstrained(Segments::create($this->segment($this->either($this->streamPool)))),
 
             AttemptShape::COMMIT_NO_STREAM
                 => $this->singleStreamPlan(static fn (StreamName $streamName) => ExpectedNoStream::create($streamName)),
@@ -155,7 +164,10 @@ final class AttemptGenerator
     private function singleStreamPlan(\Closure $constraintFactory): AttemptPlan
     {
         $streamName = $this->either($this->streamPool);
-        return new AttemptPlan([$this->segment($streamName)], [$constraintFactory($streamName)]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($streamName)),
+            ExpectedStreamConstraints::create($constraintFactory($streamName)),
+        );
     }
 
     /**
@@ -164,21 +176,27 @@ final class AttemptGenerator
     private function knownStreamPlan(\Closure $constraintFactory): AttemptPlan
     {
         $streamName = $this->either($this->knownNonEmptyStreams());
-        return new AttemptPlan([$this->segment($streamName)], [$constraintFactory($streamName)]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($streamName)),
+            ExpectedStreamConstraints::create($constraintFactory($streamName)),
+        );
     }
 
     private function staleablePlan(): AttemptPlan
     {
         $streamName = $this->either($this->staleableStreams());
-        return new AttemptPlan([$this->segment($streamName)], [$this->staleConstraint($streamName)]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($streamName)),
+            ExpectedStreamConstraints::create($this->staleConstraint($streamName)),
+        );
     }
 
     private function multiStreamPlan(bool $constrainAll): AttemptPlan
     {
         // the shape is only offered when the pool holds at least two streams
         $streamNames = $this->distinctStreams(random_int(2, max(2, min(3, count($this->streamPool)))));
-        $segments = [$this->segment($streamNames[0])];
-        foreach (array_slice($streamNames, 1) as $streamName) {
+        $segments = [];
+        foreach ($streamNames as $streamName) {
             $segments[] = $this->segment($streamName);
         }
         $constrained = $constrainAll ? $streamNames : array_slice($streamNames, 0, random_int(1, max(1, count($streamNames) - 1)));
@@ -186,7 +204,7 @@ final class AttemptGenerator
         foreach ($constrained as $streamName) {
             $constraints[] = $this->freshConstraint($streamName);
         }
-        return new AttemptPlan($segments, $constraints);
+        return AttemptPlan::create(Segments::create(...$segments), ExpectedStreamConstraints::create(...$constraints));
     }
 
     /**
@@ -202,11 +220,16 @@ final class AttemptGenerator
             for ($i = 0, $numberOfSegments = random_int(2, 3); $i < $numberOfSegments; $i++) {
                 $segments[] = $this->segment($streamName);
             }
-            return new AttemptPlan($segments, [$this->freshConstraint($streamName)]);
+            return AttemptPlan::create(
+                Segments::create(...$segments),
+                ExpectedStreamConstraints::create($this->freshConstraint($streamName)),
+            );
         }
         $otherStreamName = $this->either($this->streamPoolWithout($streamName));
-        $segments = [$this->segment($streamName), $this->segment($otherStreamName), $this->segment($streamName)];
-        return new AttemptPlan($segments, [$this->freshConstraint($streamName), $this->freshConstraint($otherStreamName)]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($streamName), $this->segment($otherStreamName), $this->segment($streamName)),
+            ExpectedStreamConstraints::create($this->freshConstraint($streamName), $this->freshConstraint($otherStreamName)),
+        );
     }
 
     /**
@@ -225,7 +248,10 @@ final class AttemptGenerator
         $constraint = $this->knowledge->isStaleable($constrainedStreamName) && random_int(0, 1) === 1
             ? $this->staleConstraint($constrainedStreamName)
             : ExpectedStreamExists::create($constrainedStreamName);
-        return new AttemptPlan([$this->segment($writtenStreamName)], [$constraint]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($writtenStreamName)),
+            ExpectedStreamConstraints::create($constraint),
+        );
     }
 
     /**
@@ -245,7 +271,10 @@ final class AttemptGenerator
     {
         $constrainedStreamName = $this->either($this->streamPool);
         $writtenStreamName = $this->either($this->streamPoolWithout($constrainedStreamName));
-        return new AttemptPlan([$this->segment($writtenStreamName)], [$this->freshConstraint($constrainedStreamName)]);
+        return AttemptPlan::create(
+            Segments::create($this->segment($writtenStreamName)),
+            ExpectedStreamConstraints::create($this->freshConstraint($constrainedStreamName)),
+        );
     }
 
     // --- Constraint construction -----
@@ -269,70 +298,61 @@ final class AttemptGenerator
     private function staleConstraint(StreamName $streamName): ExpectedStreamVersion
     {
         $lowerBound = $this->knowledge->lowerBound($streamName);
-        if ($lowerBound === null || $lowerBound < 1) {
+        if ($lowerBound === null || $lowerBound->value < 1) {
             throw new \RuntimeException(sprintf('Cannot build a stale constraint for stream "%s"', $streamName->value), 1781013021);
         }
-        return ExpectedStreamVersion::create($streamName, Version::fromInteger(random_int(0, $lowerBound - 1)));
+        return ExpectedStreamVersion::create($streamName, Version::fromInteger(random_int(0, $lowerBound->value - 1)));
     }
 
     // --- Verdict -----
 
-    /**
-     * @return array{0: Verdict, 1: string}
-     */
-    private function judge(AttemptPlan $plan): array
+    private function judge(AttemptPlan $plan): Judgement
     {
         $reasons = [];
         $allSatisfied = true;
         foreach ($plan->constraints as $constraint) {
-            [$verdict, $reason] = $this->judgeConstraint($constraint);
-            if ($verdict === Verdict::MUST_FAIL) {
-                return [Verdict::MUST_FAIL, $reason];
+            $judgement = $this->judgeConstraint($constraint);
+            if ($judgement->verdict === Verdict::MUST_FAIL) {
+                return $judgement;
             }
-            if ($verdict !== Verdict::MUST_SUCCEED) {
+            if ($judgement->verdict !== Verdict::MUST_SUCCEED) {
                 $allSatisfied = false;
             }
-            $reasons[] = $reason;
+            $reasons[] = $judgement->reason;
         }
         if ($allSatisfied) {
-            return [Verdict::MUST_SUCCEED, $reasons === [] ? 'no constraints' : implode('; ', $reasons)];
+            return Judgement::mustSucceed($reasons === [] ? 'no constraints' : implode('; ', $reasons));
         }
-        return [Verdict::UNDECIDABLE, implode('; ', $reasons)];
+        return Judgement::undecidable(implode('; ', $reasons));
     }
 
-    /**
-     * @return array{0: Verdict, 1: string}
-     */
-    private function judgeConstraint(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $constraint): array
+    private function judgeConstraint(ExpectedStreamVersion|ExpectedNoStream|ExpectedStreamExists $constraint): Judgement
     {
         $streamName = $constraint->streamName;
         $lowerBound = $this->knowledge->lowerBound($streamName);
         if ($constraint instanceof ExpectedStreamVersion) {
-            if ($lowerBound !== null && $constraint->expectedVersion->value < $lowerBound) {
-                return [Verdict::MUST_FAIL, sprintf('%s but "%s" is known to be at version %d or higher', $constraint->toDebugString(), $streamName->value, $lowerBound)];
+            if ($lowerBound !== null && $constraint->expectedVersion->value < $lowerBound->value) {
+                return Judgement::mustFail(sprintf('%s but "%s" is known to be at version %d or higher', $constraint->toDebugString(), $streamName->value, $lowerBound->value));
             }
-            return [Verdict::UNDECIDABLE, sprintf('%s racing', $constraint->toDebugString())];
+            return Judgement::undecidable(sprintf('%s racing', $constraint->toDebugString()));
         }
         if ($constraint instanceof ExpectedNoStream) {
             if ($lowerBound !== null) {
-                return [Verdict::MUST_FAIL, sprintf('%s but "%s" is known to be non-empty (version %d)', $constraint->toDebugString(), $streamName->value, $lowerBound)];
+                return Judgement::mustFail(sprintf('%s but "%s" is known to be non-empty (version %d)', $constraint->toDebugString(), $streamName->value, $lowerBound->value));
             }
-            return [Verdict::UNDECIDABLE, sprintf('%s racing', $constraint->toDebugString())];
+            return Judgement::undecidable(sprintf('%s racing', $constraint->toDebugString()));
         }
         if ($lowerBound !== null) {
-            return [Verdict::MUST_SUCCEED, sprintf('%s and "%s" is known to be non-empty (version %d)', $constraint->toDebugString(), $streamName->value, $lowerBound)];
+            return Judgement::mustSucceed(sprintf('%s and "%s" is known to be non-empty (version %d)', $constraint->toDebugString(), $streamName->value, $lowerBound->value));
         }
-        return [Verdict::UNDECIDABLE, sprintf('%s racing', $constraint->toDebugString())];
+        return Judgement::undecidable(sprintf('%s racing', $constraint->toDebugString()));
     }
 
     // --- Helpers -----
 
-    /**
-     * @return array{streamName: StreamName, count: int}
-     */
-    private function segment(StreamName $streamName): array
+    private function segment(StreamName $streamName): Segment
     {
-        return ['streamName' => $streamName, 'count' => random_int(1, $this->manifest->maxEventsPerSegment)];
+        return Segment::create($streamName, random_int(1, $this->manifest->maxEventsPerSegment));
     }
 
     /**

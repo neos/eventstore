@@ -11,16 +11,16 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
  */
 final class ValidationReport
 {
-    private const MAX_EXAMPLES_PER_CLASS = 5;
+    private const MAX_EXAMPLES_PER_VIOLATION = 5;
 
-    /** @var array<string, int> */
+    /** @var array<string, int> number of occurrences, keyed by {@see Violation} */
     private array $violationCounts = [];
 
-    /** @var array<string, list<string>> */
+    /** @var array<string, list<string>> the first few details, keyed by {@see Violation} */
     private array $violationExamples = [];
 
-    /** @var array<string, array{total: int, success: int, rejected: int, error: int}> */
-    private array $shapeCounts = [];
+    /** @var array<string, OutcomeCounts> keyed by {@see AttemptShape} */
+    private array $countsByShape = [];
 
     /** @var list<string> */
     private array $notes = [];
@@ -35,28 +35,20 @@ final class ValidationReport
     ) {
     }
 
-    public function addViolation(string $class, string $detail): void
+    public function addViolation(Violation $violation, string $detail): void
     {
-        $this->violationCounts[$class] = ($this->violationCounts[$class] ?? 0) + 1;
-        if (count($this->violationExamples[$class] ?? []) < self::MAX_EXAMPLES_PER_CLASS) {
-            $this->violationExamples[$class][] = $detail;
+        $this->violationCounts[$violation->value] = ($this->violationCounts[$violation->value] ?? 0) + 1;
+        if (count($this->violationExamples[$violation->value] ?? []) < self::MAX_EXAMPLES_PER_VIOLATION) {
+            $this->violationExamples[$violation->value][] = $detail;
         }
     }
 
     public function recordAttempt(OpLogEntry $entry): void
     {
-        $shape = $entry->shape->value;
-        $this->shapeCounts[$shape] ??= ['total' => 0, 'success' => 0, 'rejected' => 0, 'error' => 0];
-        $this->shapeCounts[$shape]['total']++;
-        if ($entry->verdict !== Verdict::MUST_FAIL) {
+        $this->countsForShape($entry->shape)->record($entry->result->outcome);
+        if ($entry->judgement->verdict !== Verdict::MUST_FAIL) {
             $this->satisfiableAttempts++;
         }
-        $key = match ($entry->outcome) {
-            Outcome::SUCCESS => 'success',
-            Outcome::REJECTED => 'rejected',
-            Outcome::UNEXPECTED_ERROR => 'error',
-        };
-        $this->shapeCounts[$shape][$key]++;
     }
 
     public function addNote(string $note): void
@@ -69,11 +61,16 @@ final class ValidationReport
         return $this->violationCounts !== [];
     }
 
+    public function countsForShape(AttemptShape $shape): OutcomeCounts
+    {
+        return $this->countsByShape[$shape->value] ??= OutcomeCounts::none();
+    }
+
     public function totalAttempts(): int
     {
         $total = 0;
-        foreach ($this->shapeCounts as $counts) {
-            $total += $counts['total'];
+        foreach ($this->countsByShape as $counts) {
+            $total += $counts->total();
         }
         return $total;
     }
@@ -92,18 +89,10 @@ final class ValidationReport
     public function totalSuccesses(): int
     {
         $total = 0;
-        foreach ($this->shapeCounts as $counts) {
-            $total += $counts['success'];
+        foreach ($this->countsByShape as $counts) {
+            $total += $counts->successes();
         }
         return $total;
-    }
-
-    /**
-     * @return array<string, array{total: int, success: int, rejected: int, error: int}>
-     */
-    public function shapeCounts(): array
-    {
-        return $this->shapeCounts;
     }
 
     public function digest(): string
@@ -116,15 +105,15 @@ final class ValidationReport
         $lines[] = sprintf('%-32s %7s %7s %9s %7s', 'SHAPE', 'total', 'ok', 'rejected', 'error');
         $lines[] = str_repeat('-', 78);
         foreach (AttemptShape::all() as $shape) {
-            $counts = $this->shapeCounts[$shape->value] ?? ['total' => 0, 'success' => 0, 'rejected' => 0, 'error' => 0];
+            $counts = $this->countsForShape($shape);
             $lines[] = sprintf(
                 '%-32s %7d %7d %9d %7d%s',
                 $shape->value,
-                $counts['total'],
-                $counts['success'],
-                $counts['rejected'],
-                $counts['error'],
-                $counts['total'] < $this->manifest->minAttemptsPerShape ? '  << under-covered' : '',
+                $counts->total(),
+                $counts->successes(),
+                $counts->rejections(),
+                $counts->errors(),
+                $counts->total() < $this->manifest->minAttemptsPerShape ? '  << under-covered' : '',
             );
         }
         $lines[] = str_repeat('-', 78);
@@ -154,12 +143,12 @@ final class ValidationReport
         $lines[] = sprintf('%-32s %7s', 'VIOLATIONS', 'count');
         $lines[] = str_repeat('-', 78);
         arsort($this->violationCounts);
-        foreach ($this->violationCounts as $class => $count) {
-            $lines[] = sprintf('%-32s %7d', $class, $count);
-            foreach ($this->violationExamples[$class] ?? [] as $example) {
+        foreach ($this->violationCounts as $violation => $count) {
+            $lines[] = sprintf('%-32s %7d', $violation, $count);
+            foreach ($this->violationExamples[$violation] ?? [] as $example) {
                 $lines[] = '    ' . $example;
             }
-            $remaining = $count - count($this->violationExamples[$class] ?? []);
+            $remaining = $count - count($this->violationExamples[$violation] ?? []);
             if ($remaining > 0) {
                 $lines[] = sprintf('    … and %d more', $remaining);
             }
@@ -172,15 +161,15 @@ final class ValidationReport
 
     public function summary(): string
     {
-        $classes = [];
-        foreach ($this->violationCounts as $class => $count) {
-            $classes[] = sprintf('%s×%d', $class, $count);
+        $violations = [];
+        foreach ($this->violationCounts as $violation => $count) {
+            $violations[] = sprintf('%s×%d', $violation, $count);
         }
         return sprintf(
             'Consistency run "%s" failed with %d violation(s): %s',
             $this->manifest->runId,
             array_sum($this->violationCounts),
-            implode(', ', $classes),
+            implode(', ', $violations),
         );
     }
 }

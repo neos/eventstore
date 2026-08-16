@@ -4,7 +4,6 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\Model\Event\StreamName;
 use Neos\EventStore\Model\Event\Version;
-use Neos\EventStore\Model\EventStore\CommitAllResult;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
@@ -27,15 +26,15 @@ final class StreamKnowledge
      * Highest version known to exist per stream. Absence means "nothing known", NOT "empty" –
      * version 0 is the first event of a stream, so 0 already implies a non-empty stream.
      *
-     * @var array<string, int>
+     * @var array<string, Version>
      */
     private array $lowerBounds = [];
 
     public function recordVersion(StreamName $streamName, Version $version): void
     {
         $current = $this->lowerBounds[$streamName->value] ?? null;
-        if ($current === null || $version->value > $current) {
-            $this->lowerBounds[$streamName->value] = $version->value;
+        if ($current === null || $version->value > $current->value) {
+            $this->lowerBounds[$streamName->value] = $version;
         }
     }
 
@@ -51,14 +50,14 @@ final class StreamKnowledge
         $this->recordVersion($streamName, $maybeVersion->unwrap());
     }
 
-    public function recordCommitResult(CommitAllResult $result): void
+    public function recordCommittedVersions(CommittedVersions $committedVersions): void
     {
-        foreach ($result->versionForStreams as $versionForStream) {
+        foreach ($committedVersions as $versionForStream) {
             $this->recordVersion($versionForStream->streamName, $versionForStream->version);
         }
     }
 
-    public function lowerBound(StreamName $streamName): ?int
+    public function lowerBound(StreamName $streamName): ?Version
     {
         return $this->lowerBounds[$streamName->value] ?? null;
     }
@@ -73,6 +72,7 @@ final class StreamKnowledge
      */
     public function isStaleable(StreamName $streamName): bool
     {
-        return ($this->lowerBounds[$streamName->value] ?? 0) >= 1;
+        $lowerBound = $this->lowerBound($streamName);
+        return $lowerBound !== null && $lowerBound->value >= 1;
     }
 }

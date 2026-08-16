@@ -4,7 +4,6 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\Model\Event\EventType;
 use Neos\EventStore\Model\Event\StreamName;
-use Webmozart\Assert\Assert;
 
 /**
  * The parameters of a single consistency run, written by the prepare step and read by every worker
@@ -94,22 +93,19 @@ final readonly class RunManifest
         if ($contents === false) {
             return null;
         }
-        $data = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        Assert::isArray($data);
-        Assert::keyExists($data, 'profile');
-        Assert::string($data['profile']);
+        $data = Json::decode($contents);
         return new self(
-            runId: self::readString($data, 'runId'),
-            profile: ConsistencyProfile::from($data['profile']),
-            directory: self::readString($data, 'directory'),
-            numberOfStreams: self::readInt($data, 'numberOfStreams'),
-            numberOfEventTypes: self::readInt($data, 'numberOfEventTypes'),
-            attemptsPerDataset: self::readInt($data, 'attemptsPerDataset'),
-            maxEventsPerSegment: self::readInt($data, 'maxEventsPerSegment'),
-            maxJitterMicroseconds: self::readInt($data, 'maxJitterMicroseconds'),
-            minAttemptsPerShape: self::readInt($data, 'minAttemptsPerShape'),
-            minSuccessRate: self::readFloat($data, 'minSuccessRate'),
-            assertMustSucceedIsNotRejected: self::readBool($data, 'assertMustSucceedIsNotRejected'),
+            runId: $data->string('runId'),
+            profile: ConsistencyProfile::from($data->string('profile')),
+            directory: $data->string('directory'),
+            numberOfStreams: $data->integer('numberOfStreams'),
+            numberOfEventTypes: $data->integer('numberOfEventTypes'),
+            attemptsPerDataset: $data->integer('attemptsPerDataset'),
+            maxEventsPerSegment: $data->integer('maxEventsPerSegment'),
+            maxJitterMicroseconds: $data->integer('maxJitterMicroseconds'),
+            minAttemptsPerShape: $data->integer('minAttemptsPerShape'),
+            minSuccessRate: $data->float('minSuccessRate'),
+            assertMustSucceedIsNotRejected: $data->boolean('assertMustSucceedIsNotRejected'),
         );
     }
 
@@ -166,47 +162,5 @@ final readonly class RunManifest
     public function totalAttempts(): int
     {
         return self::NUMBER_OF_DATASETS * $this->attemptsPerDataset;
-    }
-
-    // --- Internal -----
-
-    /**
-     * @param array<mixed> $data
-     */
-    private static function readString(array $data, string $key): string
-    {
-        Assert::keyExists($data, $key);
-        Assert::string($data[$key]);
-        return $data[$key];
-    }
-
-    /**
-     * @param array<mixed> $data
-     */
-    private static function readInt(array $data, string $key): int
-    {
-        Assert::keyExists($data, $key);
-        Assert::integer($data[$key]);
-        return $data[$key];
-    }
-
-    /**
-     * @param array<mixed> $data
-     */
-    private static function readFloat(array $data, string $key): float
-    {
-        Assert::keyExists($data, $key);
-        Assert::numeric($data[$key]);
-        return (float)$data[$key];
-    }
-
-    /**
-     * @param array<mixed> $data
-     */
-    private static function readBool(array $data, string $key): bool
-    {
-        Assert::keyExists($data, $key);
-        Assert::boolean($data[$key]);
-        return $data[$key];
     }
 }
