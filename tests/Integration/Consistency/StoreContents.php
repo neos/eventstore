@@ -12,8 +12,9 @@ use Neos\EventStore\Model\EventStream\VirtualStreamName;
  *
  * Built in a single pass in the global order of the store, so that both indexes come out in that order –
  * which is what allows the checks to reason about *when* a commit landed. Events that cannot belong to
- * this run are reported as orphans while reading instead of being indexed. Once read, the indexes are
- * never appended to again.
+ * this run are reported as orphans while reading instead of being indexed. The pass buckets into plain
+ * arrays and wraps each bucket into {@see StoredEvents} once at the end, so no group is ever grown after
+ * it exists.
  */
 final readonly class StoreContents
 {
@@ -29,7 +30,9 @@ final readonly class StoreContents
 
     public static function read(EventStoreInterface $eventStore, RunManifest $manifest, Attempts $attempts, ValidationReport $report): self
     {
+        /** @var array<string, list<StoredEvent>> $eventsByCommitId */
         $eventsByCommitId = [];
+        /** @var array<string, list<StoredEvent>> $eventsByStreamName */
         $eventsByStreamName = [];
         $lastSequenceNumber = SequenceNumber::none();
         $numberOfEvents = 0;
@@ -58,7 +61,7 @@ final readonly class StoreContents
                 continue;
             }
             $storedEvent = StoredEvent::create($eventEnvelope, $payload);
-            ($eventsByStreamName[$storedEvent->streamName->value] ??= StoredEvents::none())->append($storedEvent);
+            $eventsByStreamName[$storedEvent->streamName->value][] = $storedEvent;
 
             if ($payload->runId !== $manifest->runId) {
                 $report->addViolation(Violation::ORPHAN_EVENT, sprintf(
@@ -79,10 +82,13 @@ final readonly class StoreContents
                 ));
                 continue;
             }
-            ($eventsByCommitId[$payload->commitId] ??= StoredEvents::none())->append($storedEvent);
+            $eventsByCommitId[$payload->commitId][] = $storedEvent;
         }
         $report->addNote(sprintf('%d events in store across %d streams', $numberOfEvents, count($eventsByStreamName)));
-        return new self($eventsByCommitId, $eventsByStreamName);
+        return new self(
+            array_map(StoredEvents::fromArray(...), $eventsByCommitId),
+            array_map(StoredEvents::fromArray(...), $eventsByStreamName),
+        );
     }
 
     /**

@@ -4,19 +4,23 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\Model\Event\SequenceNumber;
 use Neos\EventStore\Model\Event\StreamName;
-use Neos\EventStore\Model\Event\Version;
 use Neos\EventStore\Model\EventStream\MaybeVersion;
 
 /**
- * Events read back from the store, in ascending sequence number order
+ * A group of events read back from the store, in the global order of the store
  *
- * Deliberately mutable: the validator reads the whole store once and files every event into the group of
- * its stream and the group of its commit, and copying a group of thousands of events per appended event
- * would turn that single pass into a quadratic one.
+ * Every group is built in one go from a complete list – the indexes of {@see StoreContents} bucket the
+ * events into plain arrays while reading and wrap each bucket once, so no group is ever appended to after
+ * it exists. Ascending sequence numbers are therefore an invariant of every group, and the first event is
+ * the one the store published first.
+ *
+ * Some groups additionally hold a single stream only, which is what makes {@see streamName()} and
+ * {@see versionBefore()} meaningful. Those are the groups {@see groupedByStreamName()} and
+ * {@see StoreContents::eventsOfStream()} return.
  *
  * @implements \IteratorAggregate<int, StoredEvent>
  */
-final class StoredEvents implements \IteratorAggregate, \Countable
+final readonly class StoredEvents implements \IteratorAggregate, \Countable
 {
     /**
      * @param list<StoredEvent> $items
@@ -26,17 +30,20 @@ final class StoredEvents implements \IteratorAggregate, \Countable
     ) {
     }
 
+    /**
+     * @param list<StoredEvent> $items in the global order of the store
+     *
+     * The order is not verified: a store that publishes events out of order is a violation to be reported
+     * {@see Violation::SEQUENCE_NOT_ASCENDING} rather than an error to fail the validation run with.
+     */
+    public static function fromArray(array $items): self
+    {
+        return new self($items);
+    }
+
     public static function none(): self
     {
         return new self([]);
-    }
-
-    /**
-     * Appends an event that follows all previously appended ones in the global order of the store
-     */
-    public function append(StoredEvent $event): void
-    {
-        $this->items[] = $event;
     }
 
     public function isEmpty(): bool
@@ -44,11 +51,17 @@ final class StoredEvents implements \IteratorAggregate, \Countable
         return $this->items === [];
     }
 
+    /**
+     * The event of this group the store published first
+     */
     public function first(): StoredEvent
     {
         return $this->items[0] ?? throw new \RuntimeException('There is no first event of an empty group', 1781013051);
     }
 
+    /**
+     * The event of this group the store published last
+     */
     public function last(): StoredEvent
     {
         return $this->items[count($this->items) - 1] ?? throw new \RuntimeException('There is no last event of an empty group', 1781013052);
@@ -65,28 +78,45 @@ final class StoredEvents implements \IteratorAggregate, \Countable
     }
 
     /**
-     * @return array<string, self> keyed by stream name, in the order the streams were first encountered
+     * This group split into one group per stream, each keeping the order of this one
+     *
+     * @return list<self> in the order the streams were first encountered
      */
     public function groupedByStreamName(): array
     {
-        $groups = [];
+        $buckets = [];
         foreach ($this->items as $event) {
-            $groups[$event->streamName->value] ??= self::none();
-            $groups[$event->streamName->value]->append($event);
+            $buckets[$event->streamName->value][] = $event;
         }
-        return $groups;
+        return array_values(array_map(self::fromArray(...), $buckets));
     }
 
     /**
-     * @return list<Version>
+     * Whether the versions ascend by exactly one from event to event
+     *
+     * Only meaningful for a group that holds a single stream {@see groupedByStreamName()}
      */
-    public function versions(): array
+    public function versionsAreConsecutive(): bool
     {
-        return array_map(static fn (StoredEvent $event) => $event->version, $this->items);
+        $previous = null;
+        foreach ($this->items as $event) {
+            if ($previous !== null && $event->version->value !== $previous->value + 1) {
+                return false;
+            }
+            $previous = $event->version;
+        }
+        return true;
+    }
+
+    public function versionsToDebugString(): string
+    {
+        return implode(', ', array_map(static fn (StoredEvent $event) => $event->version->value, $this->items));
     }
 
     /**
      * The version the stream of these events had strictly before the given point in the global order
+     *
+     * Only meaningful for a group that holds a single stream {@see StoreContents::eventsOfStream()}
      *
      * A binary search rather than a scan, because it is asked once per constraint of every successful
      * commit, against streams that can hold tens of thousands of events.
@@ -108,20 +138,10 @@ final class StoredEvents implements \IteratorAggregate, \Countable
         return MaybeVersion::fromVersionOrNull($version);
     }
 
-    public function lowestSequenceNumber(): SequenceNumber
-    {
-        $lowest = null;
-        foreach ($this->items as $event) {
-            if ($lowest === null || $event->sequenceNumber->value < $lowest->value) {
-                $lowest = $event->sequenceNumber;
-            }
-        }
-        return $lowest ?? throw new \RuntimeException('An empty group of events has no sequence number', 1781013053);
-    }
-
     /**
-     * The stream these events belong to – only meaningful for a group that holds a single stream
-     * {@see groupedByStreamName()}
+     * The stream these events belong to
+     *
+     * Only meaningful for a group that holds a single stream {@see groupedByStreamName()}
      */
     public function streamName(): StreamName
     {

@@ -4,7 +4,6 @@ namespace Neos\EventStore\Tests\Integration\Consistency;
 
 use Neos\EventStore\EventStoreInterface;
 use Neos\EventStore\Model\Event\SequenceNumber;
-use Neos\EventStore\Model\Event\Version;
 
 /**
  * Cross-checks the contents of the event store against the op logs of every worker process
@@ -104,17 +103,13 @@ final readonly class ConsistencyValidator
     private function checkCommitVersions(OpLogEntry $attempt, StoredEvents $eventsInCommitOrder): void
     {
         foreach ($eventsInCommitOrder->groupedByStreamName() as $eventsOfStream) {
-            $versions = $eventsOfStream->versions();
-            foreach ($versions as $index => $version) {
-                if ($index > 0 && $version->value !== $versions[$index - 1]->value + 1) {
-                    $this->report->addViolation(Violation::COMMIT_VERSION_GAP, sprintf(
-                        '%s – versions written to stream "%s" are not consecutive: %s',
-                        $attempt->toDebugString(),
-                        $eventsOfStream->streamName()->value,
-                        implode(', ', array_map(static fn (Version $item) => $item->value, $versions)),
-                    ));
-                    break;
-                }
+            if (!$eventsOfStream->versionsAreConsecutive()) {
+                $this->report->addViolation(Violation::COMMIT_VERSION_GAP, sprintf(
+                    '%s – versions written to stream "%s" are not consecutive: %s',
+                    $attempt->toDebugString(),
+                    $eventsOfStream->streamName()->value,
+                    $eventsOfStream->versionsToDebugString(),
+                ));
             }
             $reportedVersion = $attempt->result->committedVersions->versionFor($eventsOfStream->streamName());
             $actualVersion = $eventsOfStream->last()->version;
@@ -182,7 +177,7 @@ final readonly class ConsistencyValidator
                 // a success that wrote nothing has no place in the order – already reported as PHANTOM_SUCCESS
                 continue;
             }
-            $sequenceNumber = $found->lowestSequenceNumber();
+            $sequenceNumber = $found->first()->sequenceNumber;
             foreach ($attempt->constraints as $constraint) {
                 $maybeVersion = $this->store->eventsOfStream($constraint->streamName)->versionBefore($sequenceNumber);
                 if ($constraint->isSatisfiedBy($maybeVersion)) {
