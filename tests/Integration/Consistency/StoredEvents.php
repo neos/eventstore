@@ -69,6 +69,9 @@ final readonly class StoredEvents implements \IteratorAggregate, \Countable
 
     /**
      * The events in the order their commit declared, which is not necessarily the order they were found in
+     *
+     * Breaks the ascending-sequence-number invariant every other group has, so the result must never be
+     * passed to {@see versionBefore()}, whose binary search depends on that invariant.
      */
     public function sortedByPositionInCommit(): self
     {
@@ -119,7 +122,8 @@ final readonly class StoredEvents implements \IteratorAggregate, \Countable
      * Only meaningful for a group that holds a single stream {@see StoreContents::eventsOfStream()}
      *
      * A binary search rather than a scan, because it is asked once per constraint of every successful
-     * commit, against streams that can hold tens of thousands of events.
+     * commit, against streams that can hold tens of thousands of events. Requires ascending sequence
+     * numbers, so never call this on the result of {@see sortedByPositionInCommit()}.
      */
     public function versionBefore(SequenceNumber $sequenceNumber): MaybeVersion
     {
