@@ -21,12 +21,10 @@ use Neos\EventStore\Model\EventStore\VersionForStream;
 use Neos\EventStore\Model\EventStream\EventStreamFilter;
 use Neos\EventStore\Model\EventStream\EventStreamInterface;
 use Neos\EventStore\Model\EventStream\ExpectedVersion;
-use Neos\EventStore\Model\EventStream\MaybeVersion;
 use Neos\EventStore\Model\EventStream\VirtualStreamName;
 use Neos\EventStore\WithResetInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 #[CoversNothing]
@@ -38,6 +36,8 @@ abstract class AbstractEventStoreTestBase extends TestCase
      * Must use {@see EventStoreFakeClock} for testing.
      */
     abstract protected static function createEventStore(): EventStoreInterface;
+
+    abstract protected static function resetEventStore(): void;
 
     // --- Tests ----
 
@@ -564,98 +564,9 @@ abstract class AbstractEventStoreTestBase extends TestCase
         ]);
     }
 
-    // --- Consistency tests -----
-
-    public static function consistency_prepare(): void
-    {
-        static::createEventStore()->setup();
-    }
-
-
-    /**
-     * @return iterable<array<int>>
-     */
-    public static function commit_consistency_dataProvider(): iterable
-    {
-        for ($i = 0; $i < 40; $i++) {
-            yield [$i];
-        }
-    }
-
-    #[DataProvider('commit_consistency_dataProvider')]
-    #[Group('parallel')]
-    public function test_commit_consistency(int $process): void
-    {
-        $numberOfEventTypes = 5;
-        $numberOfStreams = 3;
-        $maxNumberOfEventsPerCommit = 3;
-        $numberOfEventBatches = 30;
-
-        $eventTypes = self::spawn($numberOfEventTypes, static fn (int $index) => EventType::fromString('Events' . $index));
-        $streamNames = self::spawn($numberOfStreams, static fn (int $index) => StreamName::fromString('stream-' . $index));
-        for ($eventBatch = 0; $eventBatch < $numberOfEventBatches; $eventBatch ++) {
-            $streamName = self::either(...$streamNames);
-            $streamVersion = $this->getStreamVersion($streamName);
-            $expectedVersion = $streamVersion->isNothing() ? ExpectedVersion::NO_STREAM() : ExpectedVersion::fromVersion($streamVersion->unwrap());
-
-            $numberOfEvents = self::between(1, $maxNumberOfEventsPerCommit);
-            $events = [];
-            for ($i = 0; $i < $numberOfEvents; $i++) {
-                $descriptor = $process . '(' . getmypid() . ') ' . $eventBatch . '.' . ($i + 1) . '/' . $numberOfEvents;
-                $eventData = $i > 0 ? ['descriptor' => $descriptor] : ['expectedVersion' => $expectedVersion->value, 'descriptor' => $descriptor];
-                $events[] = new Event(EventId::create(), self::either(...$eventTypes), EventData::fromString(json_encode($eventData, JSON_THROW_ON_ERROR)));
-            }
-            try {
-                static::createEventStore()->commit($streamName, Events::fromArray($events), $expectedVersion);
-            } catch (ConcurrencyException $e) {
-                // Concurrency exceptions are ignored because we expect them when running multiple instances in parallel
-            }
-        }
-        self::assertTrue(true);
-    }
-
-    public static function consistency_validateEvents(): void
-    {
-        /** HOTFIX to use PHP unit assertions https://github.com/Behat/Behat/issues/1618 */
-        (new \PHPUnit\TextUI\Configuration\Builder())->build([]);
-
-        /** @var array<string, EventEnvelope[]> $processedEventEnvelopesByStreamName */
-        $processedEventEnvelopesByStreamName = [];
-        $lastSequenceNumber = 0;
-        foreach (static::createEventStore()->load(VirtualStreamName::all()) as $eventEnvelope) {
-            $sequenceNumber = $eventEnvelope->sequenceNumber->value;
-            self::assertGreaterThan($lastSequenceNumber, $sequenceNumber, sprintf('Expected sequence number of event "%s" to be greater than the previous one (%d) but it is %d', $eventEnvelope->event->id->value, $lastSequenceNumber, $sequenceNumber));
-            $payload = json_decode($eventEnvelope->event->data->value, true, 512, JSON_THROW_ON_ERROR);
-            self::assertIsArray($payload);
-            if (!isset($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value])) {
-                $expectedVersion = $payload['expectedVersion'] ?? null;
-                self::assertSame(ExpectedVersion::NO_STREAM()->value, $expectedVersion, sprintf('Event "%s" is the first in stream "%s" but it was committed with an "expectedVersion" of %s instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, json_encode($expectedVersion), ExpectedVersion::NO_STREAM()->value));
-                self::assertSame(Version::first()->value, $eventEnvelope->version->value, sprintf('Event "%s" is the first in stream "%s" but it has a version of %d instead of %d', $eventEnvelope->event->id->value, $eventEnvelope->streamName->value, $eventEnvelope->version->value, Version::first()->value));
-                $processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value] = [$eventEnvelope];
-            } else {
-                $numberOfEventsInStream = count($processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value]);
-                $expectedVersion = Version::fromInteger($numberOfEventsInStream);
-                self::assertSame($expectedVersion->value, $eventEnvelope->version->value, sprintf('Event "%s" is the %d. in stream "%s" but it has a version of %d instead of %d', $eventEnvelope->event->id->value, $numberOfEventsInStream + 1, $eventEnvelope->streamName->value, $eventEnvelope->version->value, $expectedVersion->value));
-                $processedEventEnvelopesByStreamName[$eventEnvelope->streamName->value][] = $eventEnvelope;
-            }
-            $lastSequenceNumber = $sequenceNumber;
-        }
-        self::assertGreaterThan(0, $lastSequenceNumber, 'No events were verified');
-    }
-
-
     public function tearDown(): void
     {
-        if ($this->name() === 'test_commit_consistency') {
-            // TODO Hack, possibly revert https://github.com/neos/eventstore/pull/14 and split test into two files
-            return;
-        }
-        $eventStore = $this->getEventStore();
-
-        /** If the EventStore does not allow pruning {@see createEventStore} must return a new instance */
-        if ($eventStore instanceof WithResetInterface) {
-            $eventStore->reset();
-        }
+        static::resetEventStore();
     }
 
 
@@ -758,40 +669,5 @@ abstract class AbstractEventStoreTestBase extends TestCase
             isset($event['causationId']) ? CausationId::fromString($event['causationId']): null,
             isset($event['correlationId']) ? Event\CorrelationId::fromString($event['correlationId']): null,
         );
-    }
-
-    final protected function getStreamVersion(StreamName $streamName): MaybeVersion
-    {
-        $lastEventEnvelope = null;
-        foreach (static::createEventStore()->load($streamName)->backwards() as $eventEnvelope) {
-            $lastEventEnvelope = $eventEnvelope;
-            break;
-        }
-        return MaybeVersion::fromVersionOrNull($lastEventEnvelope?->version);
-    }
-
-    /**
-     * @template T
-     * @param \Closure(int): T $closure
-     * @return array<int, T>
-     */
-    private static function spawn(int $number, \Closure $closure): array
-    {
-        return array_map($closure, range(1, $number));
-    }
-
-    /**
-     * @template T
-     * @param T ...$choices
-     * @return T
-     */
-    private static function either(...$choices): mixed
-    {
-        return $choices[array_rand($choices)];
-    }
-
-    private static function between(int $min, int $max): int
-    {
-        return random_int($min, $max);
     }
 }
