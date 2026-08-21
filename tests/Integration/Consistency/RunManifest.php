@@ -132,7 +132,7 @@ final readonly class RunManifest
     public function opLogPaths(): array
     {
         $paths = glob($this->directory . '/ops-*.jsonl');
-        return $paths === false ? [] : array_values($paths);
+        return $paths === false ? [] : $paths;
     }
 
     /**
@@ -157,10 +157,5 @@ final readonly class RunManifest
             $eventTypes[] = EventType::fromString('Events' . $i);
         }
         return $eventTypes;
-    }
-
-    public function totalAttempts(): int
-    {
-        return self::NUMBER_OF_DATASETS * $this->attemptsPerDataset;
     }
 }

@@ -82,11 +82,11 @@ final readonly class ConsistencyValidator
         foreach ($eventsInCommitOrder as $event) {
             $expectedEventId = $attempt->eventIds->at($index);
             if ($expectedEventId === null || $expectedEventId->value !== $event->id->value) {
-                $this->report->addViolation(Violation::EVENT_ID_MISMATCH, sprintf('%s – event %d of the commit is "%s" but "%s" was written', $attempt->toDebugString(), $index + 1, $expectedEventId?->value ?? '(none)', $event->id->value));
+                $this->report->addViolation(Violation::EVENT_ID_MISMATCH, sprintf('%s – event %d of the commit is "%s" but "%s" was written', $attempt->toDebugString(), $index + 1, $expectedEventId->value ?? '(none)', $event->id->value));
             }
             $expectedStreamName = $expectedStreamNames[$index] ?? null;
             if ($expectedStreamName === null || !$expectedStreamName->equals($event->streamName)) {
-                $this->report->addViolation(Violation::SEGMENT_MISMATCH, sprintf('%s – event %d belongs in stream "%s" but was written to "%s"', $attempt->toDebugString(), $index + 1, $expectedStreamName?->value ?? '(none)', $event->streamName->value));
+                $this->report->addViolation(Violation::SEGMENT_MISMATCH, sprintf('%s – event %d belongs in stream "%s" but was written to "%s"', $attempt->toDebugString(), $index + 1, $expectedStreamName->value ?? '(none)', $event->streamName->value));
             }
             if ($event->sequenceNumber->value <= $previousSequenceNumber->value) {
                 $this->report->addViolation(Violation::COMMIT_ORDER_MISMATCH, sprintf('%s – event %d has sequence number %d which does not follow the previous event of the same commit (%d)', $attempt->toDebugString(), $index + 1, $event->sequenceNumber->value, $previousSequenceNumber->value));
