@@ -18,4 +18,9 @@ final class InMemoryEventStoreTest extends AbstractEventStoreTestBase
             clock: EventStoreFakeClock::get()
         );
     }
+
+    protected static function resetEventStore(): void
+    {
+        // every createEventStore() call returns a fresh in-memory instance, so there is no shared state to reset
+    }
 }
