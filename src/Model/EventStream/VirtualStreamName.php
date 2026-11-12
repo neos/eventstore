@@ -37,7 +37,6 @@ final class VirtualStreamName
 
     public static function forCorrelationId(CorrelationId $correlationId): self
     {
-        Assert::stringNotEmpty($correlationId);
         return self::constant(VirtualStreamType::CORRELATION_ID, $correlationId->value);
     }
 
